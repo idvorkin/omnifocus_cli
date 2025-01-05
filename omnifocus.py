@@ -184,6 +184,9 @@ def add_tasks_from_clipboard(
     ic(print_only)
     clipboard_content = system.get_clipboard_content()
 
+    # Get existing tasks for duplicate checking
+    existing_tasks = {task.name.lower(): task for task in manager.get_all_tasks()}
+
     # Split into lines and clean up each line
     lines = [line.strip() for line in clipboard_content.split("\n") if line.strip()]
 
@@ -210,14 +213,18 @@ def add_tasks_from_clipboard(
     print(
         f"\nFound {len(lines)} lines, {len(cleaned_tasks)} valid tasks, {len(unique_tasks)} unique tasks"
     )
-    print("\nTasks to add:")
-    print("-------------")
+    print("\nTasks to process:")
+    print("----------------")
 
     for task in unique_tasks:
-        print(f"• {task}")
-        if not print_only:
-            task_name, tags = extract_tags_from_task(task)
-            manager.add_task(task_name, tags=tags)
+        task_name, tags = extract_tags_from_task(task)
+        if task_name.lower() in existing_tasks:
+            existing_task = existing_tasks[task_name.lower()]
+            print(f"• {task_name} (Already exists in project: {existing_task.project})")
+        else:
+            print(f"• {task_name}")
+            if not print_only:
+                manager.add_task(task_name, tags=tags)
 
 
 class View(str, Enum):

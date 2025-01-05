@@ -177,3 +177,36 @@ def test_get_flagged_tasks(manager, mock_system):
     assert tasks[0].tags == ["work"]
     assert tasks[0].due_date == datetime(2024, 1, 4, 12, 0, tzinfo=timezone.utc)
     assert tasks[0].creation_date == datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc)
+
+
+@patch("omnifocus.manager")
+@patch("omnifocus.system")
+def test_add_from_clipboard_with_existing_tasks(mock_system_global, mock_manager_global):
+    """Test that existing tasks are not added when using add-tasks-from-clipboard."""
+    # Setup mock clipboard content
+    mock_system_global.get_clipboard_content.return_value = """
+    1. Existing task
+    2. New task
+    3. Another existing task
+    """
+
+    # Mock existing tasks
+    mock_manager_global.get_all_tasks.return_value = [
+        Task(name="Existing task", project="today"),
+        Task(name="Another existing task", project="Personal"),
+    ]
+
+    # Test actual add
+    result = runner.invoke(app, ["add-tasks-from-clipboard"])
+    assert result.exit_code == 0
+
+    # Verify output shows which tasks already exist
+    assert "Existing task (Already exists in project: today)" in result.stdout
+    assert "Another existing task (Already exists in project: Personal)" in result.stdout
+
+    # Verify only new tasks were added
+    add_task_calls = [call[0][0] for call in mock_manager_global.add_task.call_args_list]
+    assert len(add_task_calls) == 1
+    assert "New task" in add_task_calls
+    assert "Existing task" not in add_task_calls
+    assert "Another existing task" not in add_task_calls
