@@ -12,6 +12,8 @@ from enum import Enum
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
+import requests
+from bs4 import BeautifulSoup
 
 app = typer.Typer(
     help="OmniFocus CLI - Manage OmniFocus from the command line",
@@ -307,6 +309,48 @@ def list_flagged():
             f" [Created: {task.creation_date.date()}]" if task.creation_date else ""
         )
         print(f"• {task.name}{project}{tags}{due}{created}")
+
+
+@app.command()
+def add_url_task(
+    url: Annotated[str, typer.Argument(help="The URL to create a task from")],
+    project: Annotated[str, typer.Option(help="Project to add the task to")] = "",
+):
+    """Create a task from a URL, using the page title as the task name."""
+    try:
+        # Fetch the webpage
+        response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
+        response.raise_for_status()
+        
+        # Parse the HTML and extract the title
+        soup = BeautifulSoup(response.text, 'html.parser')
+        title = soup.title.string.strip() if soup.title else url
+        
+        # Create the task with the URL as a note
+        task_name = f"{title}"
+        note = f"Source: {url}"
+        
+        # Construct the URL with note parameter
+        params = {
+            "name": task_name,
+            "note": note,
+            "autosave": "true",
+        }
+        
+        # Only add project if specified (otherwise it goes to inbox)
+        if project:
+            params["project"] = project
+        
+        omnifocus_url = "omnifocus:///add?" + urllib.parse.urlencode(
+            params, quote_via=urllib.parse.quote
+        )
+        ic("Creating task from URL", url)
+        system.open_url(omnifocus_url)
+        
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching URL: {e}")
+    except Exception as e:
+        print(f"Error processing URL: {e}")
 
 
 if __name__ == "__main__":

@@ -5,6 +5,7 @@ from unittest.mock import patch, MagicMock
 import pytest
 from typer.testing import CliRunner
 from datetime import datetime, timezone
+import requests
 from omnifocus import (
     app,
     sanitize_task_text,
@@ -210,3 +211,60 @@ def test_add_from_clipboard_with_existing_tasks(mock_system_global, mock_manager
     assert "New task" in add_task_calls
     assert "Existing task" not in add_task_calls
     assert "Another existing task" not in add_task_calls
+
+
+@patch("omnifocus.requests")
+@patch("omnifocus.system")
+def test_add_url_task(mock_system_global, mock_requests):
+    """Test adding a task from a URL."""
+    # Mock the web request response
+    mock_response = MagicMock()
+    mock_response.text = "<html><head><title>Test Page Title</title></head><body>content</body></html>"
+    mock_requests.get.return_value = mock_response
+
+    # Test adding a URL task (should go to inbox by default)
+    result = runner.invoke(app, ["add-url-task", "https://example.com"])
+    assert result.exit_code == 0
+
+    # Verify the request was made with the correct headers
+    mock_requests.get.assert_called_with(
+        "https://example.com",
+        headers={'User-Agent': 'Mozilla/5.0'}
+    )
+
+    # Verify the task was created with the correct URL (no project = inbox)
+    expected_url = "omnifocus:///add?name=Test%20Page%20Title&note=Source%3A%20https%3A%2F%2Fexample.com&autosave=true"
+    mock_system_global.open_url.assert_called_with(expected_url)
+
+    # Test with a custom project
+    result = runner.invoke(app, ["add-url-task", "https://example.com", "--project", "Reading List"])
+    assert result.exit_code == 0
+    expected_url = "omnifocus:///add?name=Test%20Page%20Title&note=Source%3A%20https%3A%2F%2Fexample.com&autosave=true&project=Reading%20List"
+    mock_system_global.open_url.assert_called_with(expected_url)
+
+
+@patch("omnifocus.requests")
+@patch("omnifocus.system")
+def test_add_url_task_error_handling(mock_system_global, mock_requests):
+    """Test error handling when adding a task from a URL."""
+    # Test network error
+    class MockRequestException(Exception):
+        pass
+    mock_requests.exceptions.RequestException = MockRequestException
+    mock_requests.get.side_effect = MockRequestException("Network error")
+    
+    result = runner.invoke(app, ["add-url-task", "https://example.com"])
+    assert result.exit_code == 0  # Should not crash
+    assert "Error fetching URL: Network error" in result.stdout
+    assert not mock_system_global.open_url.called
+
+    # Test missing title
+    mock_response = MagicMock()
+    mock_response.text = "<html><head></head><body>content</body></html>"
+    mock_requests.get.side_effect = None
+    mock_requests.get.return_value = mock_response
+    
+    result = runner.invoke(app, ["add-url-task", "https://example.com"])
+    assert result.exit_code == 0
+    expected_url = "omnifocus:///add?name=https%3A%2F%2Fexample.com&note=Source%3A%20https%3A%2F%2Fexample.com&autosave=true"
+    mock_system_global.open_url.assert_called_with(expected_url)
