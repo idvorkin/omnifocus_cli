@@ -312,45 +312,66 @@ def list_flagged():
 
 
 @app.command()
-def add_url_task(
-    url: Annotated[str, typer.Argument(help="The URL to create a task from")],
-    project: Annotated[str, typer.Option(help="Project to add the task to")] = "",
+def add(
+    task: Annotated[str, typer.Argument(help="The task or URL to create a task from")],
+    project: Annotated[str, typer.Option(help="Project to add the task to")] = "today",
+    tags: Annotated[Optional[str], typer.Option("--tag", help="Tags to add to the task (can be specified multiple times)")] = None,
 ):
-    """Create a task from a URL, using the page title as the task name."""
-    try:
-        # Fetch the webpage
-        response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
-        response.raise_for_status()
-        
-        # Parse the HTML and extract the title
-        soup = BeautifulSoup(response.text, 'html.parser')
-        title = soup.title.string.strip() if soup.title else url
-        
-        # Create the task with the URL as a note
-        task_name = f"{title}"
-        note = f"Source: {url}"
-        
-        # Construct the URL with note parameter
+    """Create a task. If the input looks like a URL, it will fetch the page title and use it as the task name."""
+    # Convert tags string to list if provided
+    tag_list = []
+    if tags:
+        tag_list.extend(tags.split(","))
+
+    # Check if the input looks like a URL
+    if task.startswith(("http://", "https://")):
+        try:
+            # Add url tag for URL tasks
+            tag_list.append("url")
+            
+            # Fetch the webpage
+            response = requests.get(task, headers={'User-Agent': 'Mozilla/5.0'})
+            response.raise_for_status()
+            
+            # Parse the HTML and extract the title
+            soup = BeautifulSoup(response.text, 'html.parser')
+            title = soup.title.string.strip() if soup.title else task
+            
+            # Create the task with the URL as a note
+            params = {
+                "name": title,
+                "note": f"Source: {task}",
+                "autosave": "true",
+                "flag": "true",
+                "project": project,
+                "tags": ",".join(tag_list),
+            }
+            
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching URL: {e}")
+            return
+        except Exception as e:
+            print(f"Error processing URL: {e}")
+            return
+    else:
+        # Regular task
+        if len(task) < 3:
+            print("Task text too short (minimum 3 characters)")
+            return
+
         params = {
-            "name": task_name,
-            "note": note,
+            "name": task,
             "autosave": "true",
+            "flag": "true",
+            "project": project,
+            "tags": ",".join(tag_list),
         }
-        
-        # Only add project if specified (otherwise it goes to inbox)
-        if project:
-            params["project"] = project
-        
-        omnifocus_url = "omnifocus:///add?" + urllib.parse.urlencode(
-            params, quote_via=urllib.parse.quote
-        )
-        ic("Creating task from URL", url)
-        system.open_url(omnifocus_url)
-        
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching URL: {e}")
-    except Exception as e:
-        print(f"Error processing URL: {e}")
+
+    omnifocus_url = "omnifocus:///add?" + urllib.parse.urlencode(
+        params, quote_via=urllib.parse.quote
+    )
+    ic("Creating task", task)
+    system.open_url(omnifocus_url)
 
 
 if __name__ == "__main__":
