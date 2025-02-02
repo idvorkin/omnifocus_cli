@@ -14,6 +14,7 @@ from typing import List, Optional
 from datetime import datetime
 import requests
 from bs4 import BeautifulSoup
+import uuid
 
 app = typer.Typer(
     help="OmniFocus CLI - Manage OmniFocus from the command line",
@@ -64,8 +65,87 @@ class OmniFocusManager:
     def __init__(self, system: OSXSystem):
         self.system = system
 
+    def _get_tasks_with_filter(self, filter_conditions: dict) -> List[Task]:
+        """Internal helper to get tasks matching specified conditions.
+        
+        Args:
+            filter_conditions: Dictionary of conditions to filter tasks by
+                             e.g. {'completed': false, 'flagged': true}
+        """
+        conditions_str = ", ".join(f"{k}: {str(v).lower()}" for k, v in filter_conditions.items())
+        javascript = f"""
+            function run() {{
+                const of = Application('OmniFocus');
+                of.includeStandardAdditions = true;
+                
+                const doc = of.defaultDocument;
+                const tasks = doc.flattenedTasks.whose({{{conditions_str}}})();
+                
+                const taskList = tasks.map(task => ({{
+                    name: task.name(),
+                    project: task.containingProject() ? task.containingProject().name() : "No Project",
+                    flagged: task.flagged(),
+                    tags: Array.from(task.tags()).map(t => t.name()),
+                    due_date: task.dueDate() ? task.dueDate().toISOString() : null,
+                    creation_date: task.creationDate() ? task.creationDate().toISOString() : null
+                }}));
+                
+                return JSON.stringify(taskList);
+            }}
+        """
+        result = self.system.run_javascript(javascript)
+        tasks_data = json.loads(result)
+        return [Task.model_validate(task) for task in tasks_data]
+
     def get_all_tasks(self) -> List[Task]:
         """Get all incomplete tasks from OmniFocus."""
+        return self._get_tasks_with_filter({'completed': False})
+
+    def get_flagged_tasks(self) -> List[Task]:
+        """Get all flagged incomplete tasks."""
+        return self._get_tasks_with_filter({'completed': False, 'flagged': True})
+
+    def add_task(
+        self, 
+        task_name: str, 
+        project: str = "today", 
+        tags: List[str] | None = None,
+        note: str = "",
+        flagged: bool = True
+    ) -> None:
+        """Add a task to OmniFocus.
+        
+        Args:
+            task_name: The name of the task
+            project: The project to add the task to (defaults to "today")
+            tags: List of tags to apply to the task
+            note: Additional notes for the task
+            flagged: Whether to flag the task (defaults to True)
+        """
+        if len(task_name) < 3:
+            return
+
+        params = {
+            "name": task_name,
+            "autosave": "true",
+            "project": project,
+        }
+        
+        if flagged:
+            params["flag"] = "true"
+        if tags:
+            params["tags"] = ",".join(tags)
+        if note:
+            params["note"] = note
+
+        url = "omnifocus:///add?" + urllib.parse.urlencode(
+            params, quote_via=urllib.parse.quote
+        )
+        ic("Running", url)
+        self.system.open_url(url)
+
+    def get_incomplete_tasks(self) -> List[dict]:
+        """Get all incomplete tasks with their IDs, names and notes."""
         javascript = """
             function run() {
                 const of = Application('OmniFocus');
@@ -75,67 +155,33 @@ class OmniFocusManager:
                 const tasks = doc.flattenedTasks.whose({completed: false})();
                 
                 const taskList = tasks.map(task => ({
+                    id: task.id(),
                     name: task.name(),
-                    project: task.containingProject() ? task.containingProject().name() : "No Project",
-                    flagged: task.flagged(),
-                    tags: Array.from(task.tags()).map(t => t.name()),
-                    due_date: task.dueDate() ? task.dueDate().toISOString() : null,
-                    creation_date: task.creationDate() ? task.creationDate().toISOString() : null
+                    note: task.note()
                 }));
                 
                 return JSON.stringify(taskList);
             }
         """
         result = self.system.run_javascript(javascript)
-        tasks_data = json.loads(result)
-        return [Task.model_validate(task) for task in tasks_data]
+        return json.loads(result)
 
-    def get_flagged_tasks(self) -> List[Task]:
-        """Get all flagged incomplete tasks."""
-        javascript = """
-            function run() {
+    def update_task_name(self, task_id: str, new_name: str) -> None:
+        """Update a task's name by ID."""
+        update_script = f"""
+            function run() {{
                 const of = Application('OmniFocus');
                 of.includeStandardAdditions = true;
                 
                 const doc = of.defaultDocument;
-                const tasks = doc.flattenedTasks.whose({completed: false, flagged: true})();
+                const task = doc.flattenedTasks.whose({{id: "{task_id}"}})()[0];
                 
-                const taskList = tasks.map(task => ({
-                    name: task.name(),
-                    project: task.containingProject() ? task.containingProject().name() : "No Project",
-                    flagged: true,
-                    tags: Array.from(task.tags()).map(t => t.name()),
-                    due_date: task.dueDate() ? task.dueDate().toISOString() : null,
-                    creation_date: task.creationDate() ? task.creationDate().toISOString() : null
-                }));
-                
-                return JSON.stringify(taskList);
-            }
+                if (task) {{
+                    task.name = "{new_name.replace('"', '\\"')}";
+                }}
+            }}
         """
-        result = self.system.run_javascript(javascript)
-        tasks_data = json.loads(result)
-        return [Task.model_validate(task) for task in tasks_data]
-
-    def add_task(
-        self, task_name: str, project: str = "today", tags: List[str] | None = None
-    ) -> None:
-        """Add a task to OmniFocus."""
-        if len(task_name) < 3:
-            return
-
-        params = {
-            "name": task_name,
-            "autosave": "true",
-            "flag": "true",
-            "project": project,
-            "tags": ",".join(tags or []),
-        }
-
-        url = "omnifocus:///add?" + urllib.parse.urlencode(
-            params, quote_via=urllib.parse.quote
-        )
-        ic("Running", url)
-        self.system.open_url(url)
+        self.system.run_javascript(update_script)
 
 
 def sanitize_task_text(task: str) -> str:
@@ -372,6 +418,78 @@ def add(
     )
     ic("Creating task", task)
     system.open_url(omnifocus_url)
+
+
+@app.command()
+def fixup_url():
+    """Find tasks that have empty names and URLs in their notes, and update them with webpage titles."""
+    tasks_data = manager.get_incomplete_tasks()
+
+    # Find tasks with URLs in notes
+    url_pattern = r'(https?://[^\s)"]+)'
+    tasks_to_update = []
+    for task in tasks_data:
+        if task['note']:
+            urls = re.findall(url_pattern, task['note'])
+            if urls and not task['name'].strip():  # Only update if name is empty
+                tasks_to_update.append((task['id'], urls[0]))  # Take the first URL found
+
+    if not tasks_to_update:
+        print("No tasks found that need URL fixup")
+        return
+
+    print(f"Found {len(tasks_to_update)} tasks to update")
+    
+    # Update each task
+    for task_id, url in tasks_to_update:
+        try:
+            # Fetch the webpage
+            response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
+            response.raise_for_status()
+            
+            # Parse the HTML and extract the title
+            soup = BeautifulSoup(response.text, 'html.parser')
+            title = soup.title.string.strip() if soup.title else url
+
+            # Update the task name
+            manager.update_task_name(task_id, title)
+            print(f"✓ Updated task with title: {title}")
+            
+        except requests.exceptions.RequestException as e:
+            print(f"✗ Error fetching URL: {e}")
+        except Exception as e:
+            print(f"✗ Error processing task: {e}")
+
+
+@app.command()
+def test_tag(tag_name: Annotated[str, typer.Argument(help="Name of tag to create and assign")]):
+    """Test tag creation and assignment by creating a test task with the specified tag"""
+    test_name = f"TEST-{uuid.uuid4().hex[:8]}"
+    manager.add_task(test_name, note="This is a test task")
+
+
+@app.command()
+def test_update():
+    """Test task name update functionality by creating a task and updating its name"""
+    # First create a task with a unique name
+    test_name = f"TEST-{uuid.uuid4().hex[:8]}"
+    manager.add_task(test_name, note="This is a test task")
+    
+    # Get the task ID
+    tasks = manager.get_incomplete_tasks()
+    task_id = None
+    for task in tasks:
+        if task['name'] == test_name:
+            task_id = task['id']
+            break
+    
+    if task_id:
+        # Update the task name
+        new_name = f"UPDATED-{uuid.uuid4().hex[:8]}"
+        print(f"Updating task name from '{test_name}' to '{new_name}'")
+        manager.update_task_name(task_id, new_name)
+    else:
+        print("Could not find test task to update")
 
 
 if __name__ == "__main__":

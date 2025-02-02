@@ -1,7 +1,7 @@
 """Unit tests for OmniFocus CLI."""
 
 import json
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, call
 import pytest
 from typer.testing import CliRunner
 from datetime import datetime, timezone
@@ -62,22 +62,60 @@ def manager(mock_system):
 
 
 def test_add_task(manager, mock_system):
-    """Test adding a task to OmniFocus."""
-    # Test normal task
+    """Test adding a task to OmniFocus with various parameter combinations."""
+    # Test basic task with defaults
     manager.add_task("Test task")
     mock_system.open_url.assert_called_with(
-        "omnifocus:///add?name=Test%20task&autosave=true&flag=true&project=today&tags="
+        "omnifocus:///add?name=Test%20task&autosave=true&project=today&flag=true"
     )
 
-    # Test work task
-    manager.add_task("Test task", tags=["work"])
+    # Test task with project and tags
+    manager.add_task("Test task", project="Work", tags=["important", "urgent"])
     mock_system.open_url.assert_called_with(
-        "omnifocus:///add?name=Test%20task&autosave=true&flag=true&project=today&tags=work"
+        "omnifocus:///add?name=Test%20task&autosave=true&project=Work&flag=true&tags=important%2Curgent"
     )
 
-    # Test short task (should not add)
+    # Test task with note
+    manager.add_task("Test task", note="This is a test note")
+    mock_system.open_url.assert_called_with(
+        "omnifocus:///add?name=Test%20task&autosave=true&project=today&flag=true&note=This%20is%20a%20test%20note"
+    )
+
+    # Test unflagged task
+    manager.add_task("Test task", flagged=False)
+    mock_system.open_url.assert_called_with(
+        "omnifocus:///add?name=Test%20task&autosave=true&project=today"
+    )
+
+    # Test task with all parameters
+    manager.add_task(
+        "Test task",
+        project="Personal",
+        tags=["home", "weekend"],
+        note="Remember to do this",
+        flagged=True
+    )
+    mock_system.open_url.assert_called_with(
+        "omnifocus:///add?name=Test%20task&autosave=true&project=Personal&flag=true&tags=home%2Cweekend&note=Remember%20to%20do%20this"
+    )
+
+    # Test short task name (should not create task)
     manager.add_task("ab")
-    assert mock_system.open_url.call_count == 2  # Should not have increased
+    # Call count should not increase since the task was too short
+    assert mock_system.open_url.call_count == 5
+
+
+def test_add_task_escaping(manager, mock_system):
+    """Test that special characters in task parameters are properly escaped."""
+    # Test task with special characters in name and note
+    manager.add_task(
+        "Test & task",
+        note="Note with spaces & special chars: ?#",
+        tags=["tag with space"]
+    )
+    mock_system.open_url.assert_called_with(
+        "omnifocus:///add?name=Test%20%26%20task&autosave=true&project=today&flag=true&tags=tag%20with%20space&note=Note%20with%20spaces%20%26%20special%20chars%3A%20%3F%23"
+    )
 
 
 @patch("omnifocus.manager")
@@ -290,3 +328,99 @@ def test_add_command_with_regular_task(mock_system_global):
     assert result.exit_code == 0
     assert "Task text too short" in result.stdout
     assert mock_system_global.open_url.call_count == 2  # Should not have increased
+
+
+@patch("omnifocus.requests")
+@patch("omnifocus.manager")
+def test_fixup_url(mock_manager, mock_requests):
+    """Test fixing tasks with URLs."""
+    # Mock tasks with URLs in notes
+    mock_manager.get_incomplete_tasks.return_value = [
+        {
+            "id": "task1",
+            "name": "",  # Empty name
+            "note": "Source: https://example.com"
+        },
+        {
+            "id": "task2",
+            "name": "Regular task",  # Has name, should be skipped
+            "note": "Source: https://example.com"
+        },
+        {
+            "id": "task3",
+            "name": "",  # Empty name
+            "note": "Source: https://example.org"
+        }
+    ]
+
+    # Mock webpage responses
+    mock_response1 = MagicMock()
+    mock_response1.text = "<html><head><title>Example Website</title></head></html>"
+    mock_response2 = MagicMock()
+    mock_response2.text = "<html><head><title>Example Org</title></head></html>"
+    
+    mock_requests.get.side_effect = [mock_response1, mock_response2]
+
+    # Run the command
+    result = runner.invoke(app, ["fixup-url"])
+    assert result.exit_code == 0
+
+    # Verify output
+    assert "Found 2 tasks to update" in result.stdout
+    assert "Updated task with title: Example Website" in result.stdout
+    assert "Updated task with title: Example Org" in result.stdout
+
+    # Verify URL requests
+    mock_requests.get.assert_has_calls([
+        call("https://example.com", headers={'User-Agent': 'Mozilla/5.0'}),
+        call("https://example.org", headers={'User-Agent': 'Mozilla/5.0'}),
+    ])
+
+    # Verify task updates
+    mock_manager.update_task_name.assert_has_calls([
+        call("task1", "Example Website"),
+        call("task3", "Example Org")
+    ])
+
+
+@patch("omnifocus.requests")
+@patch("omnifocus.manager")
+def test_fixup_url_error_handling(mock_manager, mock_requests):
+    """Test error handling in fixup-url command."""
+    # Mock tasks with URLs
+    mock_manager.get_incomplete_tasks.return_value = [
+        {
+            "id": "task1",
+            "name": "",
+            "note": "Source: https://example.com"
+        },
+        {
+            "id": "task2",
+            "name": "",
+            "note": "Source: https://error.com"
+        }
+    ]
+
+    # Mock responses - one success, one failure
+    mock_response = MagicMock()
+    mock_response.text = "<html><head><title>Example Website</title></head></html>"
+    
+    class MockRequestException(Exception):
+        pass
+    mock_requests.exceptions.RequestException = MockRequestException
+    mock_requests.get.side_effect = [
+        mock_response,  # First URL succeeds
+        MockRequestException("Network error"),  # Second URL fails
+    ]
+
+    # Run the command
+    result = runner.invoke(app, ["fixup-url"])
+    assert result.exit_code == 0
+
+    # Verify output
+    assert "Found 2 tasks to update" in result.stdout
+    assert "Updated task with title: Example Website" in result.stdout
+    assert "Error fetching URL: Network error" in result.stdout
+
+    # Verify only one task was updated
+    mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")
