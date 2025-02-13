@@ -183,6 +183,32 @@ class OmniFocusManager:
         """
         self.system.run_javascript(update_script)
 
+    def get_inbox_tasks(self) -> List[Task]:
+        """Get all tasks from the inbox."""
+        javascript = """
+            function run() {
+                const of = Application('OmniFocus');
+                of.includeStandardAdditions = true;
+                
+                const doc = of.defaultDocument;
+                const tasks = doc.flattenedTasks.whose({inInbox: true, completed: false})();
+                
+                const taskList = tasks.map(task => ({
+                    name: task.name(),
+                    project: "Inbox",
+                    flagged: task.flagged(),
+                    tags: Array.from(task.tags()).map(t => t.name()),
+                    due_date: task.dueDate() ? task.dueDate().toISOString() : null,
+                    creation_date: task.creationDate() ? task.creationDate().toISOString() : null
+                }));
+                
+                return JSON.stringify(taskList);
+            }
+        """
+        result = self.system.run_javascript(javascript)
+        tasks_data = json.loads(result)
+        return [Task.model_validate(task) for task in tasks_data]
+
 
 def sanitize_task_text(task: str) -> str:
     """Clean up a task string by removing markers and formatting."""
@@ -490,6 +516,46 @@ def test_update():
         manager.update_task_name(task_id, new_name)
     else:
         print("Could not find test task to update")
+
+
+@app.command()
+def interesting():
+    """Show numbered list of inbox and flagged tasks"""
+    # Get both inbox and flagged tasks
+    inbox_tasks = manager.get_inbox_tasks()
+    flagged_tasks = manager.get_flagged_tasks()
+    
+    # Remove duplicates (tasks that are both in inbox and flagged)
+    seen_names = set()
+    all_tasks = []
+    
+    # Process inbox tasks first
+    for task in inbox_tasks:
+        if task.name.lower() not in seen_names:
+            seen_names.add(task.name.lower())
+            all_tasks.append(("Inbox", task))
+    
+    # Then process flagged tasks
+    for task in flagged_tasks:
+        if task.name.lower() not in seen_names:
+            seen_names.add(task.name.lower())
+            all_tasks.append(("Flagged", task))
+
+    if not all_tasks:
+        print("\nNo interesting tasks found!")
+        return
+
+    print("\nInteresting Tasks:")
+    print("=================")
+    
+    # Print tasks with numbers
+    for i, (source, task) in enumerate(all_tasks, 1):
+        project = f" ({task.project})" if task.project != "Inbox" else ""
+        tags = f" [{', '.join(task.tags)}]" if task.tags else ""
+        due = f" [Due: {task.due_date.date()}]" if task.due_date else ""
+        created = f" [Created: {task.creation_date.date()}]" if task.creation_date else ""
+        flag = "🚩 " if task.flagged else ""
+        print(f"{i:2d}. {flag}{task.name}{project}{tags}{due}{created} ({source})")
 
 
 if __name__ == "__main__":
