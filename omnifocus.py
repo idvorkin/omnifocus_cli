@@ -67,7 +67,7 @@ class OmniFocusManager:
 
     def _get_tasks_with_filter(self, filter_conditions: dict) -> List[Task]:
         """Internal helper to get tasks matching specified conditions.
-        
+
         Args:
             filter_conditions: Dictionary of conditions to filter tasks by
                              e.g. {'completed': false, 'flagged': true}
@@ -77,10 +77,10 @@ class OmniFocusManager:
             function run() {{
                 const of = Application('OmniFocus');
                 of.includeStandardAdditions = true;
-                
+
                 const doc = of.defaultDocument;
                 const tasks = doc.flattenedTasks.whose({{{conditions_str}}})();
-                
+
                 const taskList = tasks.map(task => ({{
                     name: task.name(),
                     project: task.containingProject() ? task.containingProject().name() : "No Project",
@@ -89,7 +89,7 @@ class OmniFocusManager:
                     due_date: task.dueDate() ? task.dueDate().toISOString() : null,
                     creation_date: task.creationDate() ? task.creationDate().toISOString() : null
                 }}));
-                
+
                 return JSON.stringify(taskList);
             }}
         """
@@ -106,15 +106,15 @@ class OmniFocusManager:
         return self._get_tasks_with_filter({'completed': False, 'flagged': True})
 
     def add_task(
-        self, 
-        task_name: str, 
-        project: str = "today", 
+        self,
+        task_name: str,
+        project: str = "today",
         tags: List[str] | None = None,
         note: str = "",
         flagged: bool = True
     ) -> None:
         """Add a task to OmniFocus.
-        
+
         Args:
             task_name: The name of the task
             project: The project to add the task to (defaults to "today")
@@ -130,7 +130,7 @@ class OmniFocusManager:
             "autosave": "true",
             "project": project,
         }
-        
+
         if flagged:
             params["flag"] = "true"
         if tags:
@@ -150,16 +150,16 @@ class OmniFocusManager:
             function run() {
                 const of = Application('OmniFocus');
                 of.includeStandardAdditions = true;
-                
+
                 const doc = of.defaultDocument;
                 const tasks = doc.flattenedTasks.whose({completed: false})();
-                
+
                 const taskList = tasks.map(task => ({
                     id: task.id(),
                     name: task.name(),
                     note: task.note()
                 }));
-                
+
                 return JSON.stringify(taskList);
             }
         """
@@ -172,10 +172,10 @@ class OmniFocusManager:
             function run() {{
                 const of = Application('OmniFocus');
                 of.includeStandardAdditions = true;
-                
+
                 const doc = of.defaultDocument;
                 const task = doc.flattenedTasks.whose({{id: "{task_id}"}})()[0];
-                
+
                 if (task) {{
                     task.name = "{new_name.replace('"', '\\"')}";
                 }}
@@ -189,10 +189,10 @@ class OmniFocusManager:
             function run() {
                 const of = Application('OmniFocus');
                 of.includeStandardAdditions = true;
-                
+
                 const doc = of.defaultDocument;
                 const tasks = doc.flattenedTasks.whose({inInbox: true, completed: false})();
-                
+
                 const taskList = tasks.map(task => ({
                     name: task.name(),
                     project: "Inbox",
@@ -201,7 +201,7 @@ class OmniFocusManager:
                     due_date: task.dueDate() ? task.dueDate().toISOString() : null,
                     creation_date: task.creationDate() ? task.creationDate().toISOString() : null
                 }));
-                
+
                 return JSON.stringify(taskList);
             }
         """
@@ -226,10 +226,10 @@ def sanitize_task_text(task: str) -> str:
 
 def extract_tags_from_task(task: str) -> tuple[str, List[str]]:
     """Process a task string and extract any tags.
-    
+
     Currently supports:
     - work tag: extracts from 'work:' prefix or 'work' keyword
-    
+
     Returns:
         tuple[str, List[str]]: (cleaned task text, list of extracted tags)
     """
@@ -400,15 +400,15 @@ def add(
         try:
             # Add url tag for URL tasks
             tag_list.append("url")
-            
+
             # Fetch the webpage
             response = requests.get(task, headers={'User-Agent': 'Mozilla/5.0'})
             response.raise_for_status()
-            
+
             # Parse the HTML and extract the title
             soup = BeautifulSoup(response.text, 'html.parser')
             title = soup.title.string.strip() if soup.title else task
-            
+
             # Create the task with the URL as a note
             params = {
                 "name": title,
@@ -418,7 +418,7 @@ def add(
                 "project": project,
                 "tags": ",".join(tag_list),
             }
-            
+
         except requests.exceptions.RequestException as e:
             print(f"Error fetching URL: {e}")
             return
@@ -465,14 +465,14 @@ def fixup_url():
         return
 
     print(f"Found {len(tasks_to_update)} tasks to update")
-    
+
     # Update each task
     for task_id, url in tasks_to_update:
         try:
             # Fetch the webpage
             response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
             response.raise_for_status()
-            
+
             # Parse the HTML and extract the title
             soup = BeautifulSoup(response.text, 'html.parser')
             title = soup.title.string.strip() if soup.title else url
@@ -480,7 +480,7 @@ def fixup_url():
             # Update the task name
             manager.update_task_name(task_id, title)
             print(f"✓ Updated task with title: {title}")
-            
+
         except requests.exceptions.RequestException as e:
             print(f"✗ Error fetching URL: {e}")
         except Exception as e:
@@ -500,7 +500,7 @@ def test_update():
     # First create a task with a unique name
     test_name = f"TEST-{uuid.uuid4().hex[:8]}"
     manager.add_task(test_name, note="This is a test task")
-    
+
     # Get the task ID
     tasks = manager.get_incomplete_tasks()
     task_id = None
@@ -508,7 +508,7 @@ def test_update():
         if task['name'] == test_name:
             task_id = task['id']
             break
-    
+
     if task_id:
         # Update the task name
         new_name = f"UPDATED-{uuid.uuid4().hex[:8]}"
@@ -524,17 +524,17 @@ def interesting():
     # Get both inbox and flagged tasks
     inbox_tasks = manager.get_inbox_tasks()
     flagged_tasks = manager.get_flagged_tasks()
-    
+
     # Remove duplicates (tasks that are both in inbox and flagged)
     seen_names = set()
     all_tasks = []
-    
+
     # Process inbox tasks first
     for task in inbox_tasks:
         if task.name.lower() not in seen_names:
             seen_names.add(task.name.lower())
             all_tasks.append(("Inbox", task))
-    
+
     # Then process flagged tasks
     for task in flagged_tasks:
         if task.name.lower() not in seen_names:
@@ -547,7 +547,7 @@ def interesting():
 
     print("\nInteresting Tasks:")
     print("=================")
-    
+
     # Print tasks with numbers
     for i, (source, task) in enumerate(all_tasks, 1):
         project = f" ({task.project})" if task.project != "Inbox" else ""
@@ -556,6 +556,61 @@ def interesting():
         created = f" [Created: {task.creation_date.date()}]" if task.creation_date else ""
         flag = "🚩 " if task.flagged else ""
         print(f"{i:2d}. {flag}{task.name}{project}{tags}{due}{created} ({source})")
+
+
+@app.command()
+def test_complete():
+    """Test task completion by creating a task, completing it, and verifying the completion."""
+    # First create a task with a unique name
+    test_name = f"TEST-{uuid.uuid4().hex[:8]}"
+    manager.add_task(test_name, note="This is a test task for completion")
+
+    print(f"Created test task: {test_name}")
+
+    # Get the task ID
+    tasks = manager.get_incomplete_tasks()
+    task_id = None
+    for task in tasks:
+        if task['name'] == test_name:
+            task_id = task['id']
+            break
+
+    if not task_id:
+        print("Could not find test task to complete")
+        return
+
+    # Complete the task
+    complete_script = f"""
+        function run() {{
+            const of = Application('OmniFocus');
+            of.includeStandardAdditions = true;
+
+            const doc = of.defaultDocument;
+            const tasks = doc.flattenedTasks.whose({{id: "{task_id}"}})();
+
+            if (tasks.length > 0) {{
+                const task = tasks[0];
+                task.markComplete();
+                return "Task completed successfully";
+            }}
+            return "Task not found";
+        }}
+    """
+    try:
+        result = system.run_javascript(complete_script)
+        print(result)
+
+        # Verify task is no longer in incomplete tasks
+        tasks_after = manager.get_incomplete_tasks()
+        still_exists = any(task['id'] == task_id for task in tasks_after)
+
+        if not still_exists:
+            print("✓ Verified task is no longer in incomplete tasks")
+        else:
+            print("✗ Task is still showing as incomplete")
+
+    except Exception as e:
+        print(f"Error completing task: {e}")
 
 
 if __name__ == "__main__":
