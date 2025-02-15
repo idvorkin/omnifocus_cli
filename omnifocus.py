@@ -623,5 +623,78 @@ def test_complete():
         typer.echo("Could not find the test task. It may not have been created properly.", err=True)
 
 
+@app.command()
+def complete():
+    """List interesting tasks and complete one by number."""
+    # Get both inbox and flagged tasks
+    inbox_tasks = manager.get_inbox_tasks()
+    flagged_tasks = manager.get_flagged_tasks()
+
+    # Remove duplicates (tasks that are both in inbox and flagged)
+    seen_names = set()
+    all_tasks = []
+
+    # Process inbox tasks first
+    for task in inbox_tasks:
+        if task.name.lower() not in seen_names:
+            seen_names.add(task.name.lower())
+            all_tasks.append(("Inbox", task))
+
+    # Then process flagged tasks
+    for task in flagged_tasks:
+        if task.name.lower() not in seen_names:
+            seen_names.add(task.name.lower())
+            all_tasks.append(("Flagged", task))
+
+    if not all_tasks:
+        print("\nNo interesting tasks found!")
+        return
+
+    print("\nInteresting Tasks:")
+    print("=================")
+
+    # Print tasks with numbers
+    for i, (source, task) in enumerate(all_tasks, 1):
+        project = f" ({task.project})" if task.project != "Inbox" else ""
+        tags = f" [{', '.join(task.tags)}]" if task.tags else ""
+        due = f" [Due: {task.due_date.date()}]" if task.due_date else ""
+        created = f" [Created: {task.creation_date.date()}]" if task.creation_date else ""
+        flag = "🚩 " if task.flagged else ""
+        print(f"{i:2d}. {flag}{task.name}{project}{tags}{due}{created} ({source})")
+
+    # Get task number to complete
+    try:
+        task_num = typer.prompt("\nEnter task number to complete (or Ctrl+C to cancel)")
+        task_num = int(task_num)
+        
+        if task_num < 1 or task_num > len(all_tasks):
+            typer.echo(f"Invalid task number. Please enter a number between 1 and {len(all_tasks)}")
+            return
+            
+        # Get task ID for the selected task
+        tasks = manager.get_incomplete_tasks()
+        selected_task_name = all_tasks[task_num - 1][1].name
+        task_to_complete = next((task for task in tasks if task["name"] == selected_task_name), None)
+        
+        if not task_to_complete:
+            typer.echo("Could not find the selected task. It may have been completed already.")
+            return
+            
+        # Complete the task
+        result = manager.complete_task(task_to_complete["id"])
+        typer.echo(f"✓ Completed task: {selected_task_name}")
+        typer.echo(f"Result: {result}")
+        
+    except (KeyboardInterrupt, typer.Abort):
+        typer.echo("\nOperation cancelled")
+        return
+    except ValueError:
+        typer.echo("Please enter a valid number")
+        return
+    except Exception as e:
+        typer.echo(f"Error completing task: {str(e)}")
+        return
+
+
 if __name__ == "__main__":
     app()
