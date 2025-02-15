@@ -479,17 +479,20 @@ def add(
 
 @app.command()
 def fixup_url():
-    """Find tasks that have empty names and URLs in their notes, and update them with webpage titles."""
+    """Find tasks that have empty names or URLs as names, and update them with webpage titles."""
     tasks_data = manager.get_incomplete_tasks()
 
-    # Find tasks with URLs in notes
+    # Find tasks with URLs in notes or as names
     url_pattern = r'(https?://[^\s)"]+)'
     tasks_to_update = []
     for task in tasks_data:
         if task['note']:
             urls = re.findall(url_pattern, task['note'])
-            if urls and not task['name'].strip():  # Only update if name is empty
+            if urls and not task['name'].strip():  # Empty name with URL in note
                 tasks_to_update.append((task['id'], urls[0]))  # Take the first URL found
+        # Also check if the task name itself is a URL
+        elif re.match(url_pattern, task['name'].strip()):
+            tasks_to_update.append((task['id'], task['name'].strip()))
 
     if not tasks_to_update:
         print("No tasks found that need URL fixup")

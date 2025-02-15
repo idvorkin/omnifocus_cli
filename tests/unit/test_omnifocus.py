@@ -231,7 +231,7 @@ def test_complete_task(manager, mock_system):
     mock_system.run_javascript.assert_called_once()
     js_call = mock_system.run_javascript.call_args[0][0]
     assert f'id: "{task_id}"' in js_call
-    assert "task.completed = true" in js_call
+    assert "task.markComplete()" in js_call
     
     # Test task not found
     mock_system.reset_mock()
@@ -447,3 +447,56 @@ def test_fixup_url_error_handling(mock_manager, mock_requests):
 
     # Verify only one task was updated
     mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")
+
+
+@patch("omnifocus.requests")
+@patch("omnifocus.manager")
+def test_fixup_url_with_url_names(mock_manager, mock_requests):
+    """Test fixing tasks that have URLs as their names."""
+    # Mock tasks with URLs as names
+    mock_manager.get_incomplete_tasks.return_value = [
+        {
+            "id": "task1",
+            "name": "https://example.com",  # URL as name
+            "note": ""
+        },
+        {
+            "id": "task2",
+            "name": "Regular task",  # Normal task name
+            "note": ""
+        },
+        {
+            "id": "task3",
+            "name": "https://example.org",  # Another URL as name
+            "note": ""
+        }
+    ]
+
+    # Mock webpage responses
+    mock_response1 = MagicMock()
+    mock_response1.text = "<html><head><title>Example Website</title></head></html>"
+    mock_response2 = MagicMock()
+    mock_response2.text = "<html><head><title>Example Org</title></head></html>"
+    
+    mock_requests.get.side_effect = [mock_response1, mock_response2]
+
+    # Run the command
+    result = runner.invoke(app, ["fixup-url"])
+    assert result.exit_code == 0
+
+    # Verify output
+    assert "Found 2 tasks to update" in result.stdout
+    assert "Updated task with title: Example Website" in result.stdout
+    assert "Updated task with title: Example Org" in result.stdout
+
+    # Verify URL requests
+    mock_requests.get.assert_has_calls([
+        call("https://example.com", headers={'User-Agent': 'Mozilla/5.0'}),
+        call("https://example.org", headers={'User-Agent': 'Mozilla/5.0'}),
+    ])
+
+    # Verify task updates
+    mock_manager.update_task_name.assert_has_calls([
+        call("task1", "Example Website"),
+        call("task3", "Example Org")
+    ])
