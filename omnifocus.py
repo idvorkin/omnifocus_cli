@@ -184,6 +184,23 @@ class OmniFocusManager:
         """
         self.system.run_javascript(update_script)
 
+    def update_task_note(self, task_id: str, note: str) -> None:
+        """Update a task's note by ID."""
+        update_script = f"""
+            function run() {{
+                const of = Application('OmniFocus');
+                of.includeStandardAdditions = true;
+
+                const doc = of.defaultDocument;
+                const task = doc.flattenedTasks.whose({{id: "{task_id}"}})()[0];
+
+                if (task) {{
+                    task.note = "{note.replace('"', '\\"')}";
+                }}
+            }}
+        """
+        self.system.run_javascript(update_script)
+
     def get_inbox_tasks(self) -> List[Task]:
         """Get all tasks from the inbox."""
         javascript = """
@@ -489,10 +506,10 @@ def fixup_url():
         if task['note']:
             urls = re.findall(url_pattern, task['note'])
             if urls and not task['name'].strip():  # Empty name with URL in note
-                tasks_to_update.append((task['id'], urls[0]))  # Take the first URL found
+                tasks_to_update.append((task['id'], urls[0], task['note']))  # Take the first URL found
         # Also check if the task name itself is a URL
         elif re.match(url_pattern, task['name'].strip()):
-            tasks_to_update.append((task['id'], task['name'].strip()))
+            tasks_to_update.append((task['id'], task['name'].strip(), ""))
 
     if not tasks_to_update:
         print("No tasks found that need URL fixup")
@@ -501,9 +518,19 @@ def fixup_url():
     print(f"Found {len(tasks_to_update)} tasks to update")
 
     # Update each task
-    for task_id, url in tasks_to_update:
+    for task_id, url, existing_note in tasks_to_update:
         try:
-            # Fetch the webpage
+            # First, ensure URL is in the note if it was in the name
+            if not existing_note:
+                try:
+                    note = f"Source: {url}"
+                    manager.update_task_note(task_id, note)
+                    print(f"✓ Moved URL to note: {url}")
+                except Exception as e:
+                    print(f"✗ Error processing task: {str(e)}")
+                    continue
+
+            # Then fetch and update the title
             response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
             response.raise_for_status()
 

@@ -500,3 +500,108 @@ def test_fixup_url_with_url_names(mock_manager, mock_requests):
         call("task1", "Example Website"),
         call("task3", "Example Org")
     ])
+
+
+@patch("omnifocus.requests")
+@patch("omnifocus.manager")
+def test_fixup_url_with_url_in_name(mock_manager, mock_requests):
+    """Test fixing tasks that have URLs as their names, ensuring URL is moved to note."""
+    # Mock tasks with URLs as names
+    mock_manager.get_incomplete_tasks.return_value = [
+        {
+            "id": "task1",
+            "name": "https://example.com",  # URL as name
+            "note": ""
+        }
+    ]
+
+    # Mock webpage response
+    mock_response = MagicMock()
+    mock_response.text = "<html><head><title>Example Website</title></head></html>"
+    mock_requests.get.return_value = mock_response
+
+    # Run the command
+    result = runner.invoke(app, ["fixup-url"])
+    assert result.exit_code == 0
+
+    # Verify output
+    assert "Found 1 tasks to update" in result.stdout
+    assert "Moved URL to note: https://example.com" in result.stdout
+    assert "Updated task with title: Example Website" in result.stdout
+
+    # Verify the order of operations - note should be updated before title
+    mock_manager.update_task_note.assert_called_once_with("task1", "Source: https://example.com")
+    mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")
+
+    # Verify URL request
+    mock_requests.get.assert_called_once_with(
+        "https://example.com",
+        headers={'User-Agent': 'Mozilla/5.0'}
+    )
+
+
+@patch("omnifocus.requests")
+@patch("omnifocus.manager")
+def test_fixup_url_with_url_in_note(mock_manager, mock_requests):
+    """Test fixing tasks that have empty names with URLs in notes."""
+    # Mock tasks with URLs in notes
+    mock_manager.get_incomplete_tasks.return_value = [
+        {
+            "id": "task1",
+            "name": "",  # Empty name
+            "note": "Source: https://example.org"
+        }
+    ]
+
+    # Mock webpage response
+    mock_response = MagicMock()
+    mock_response.text = "<html><head><title>Example Org</title></head></html>"
+    mock_requests.get.return_value = mock_response
+
+    # Run the command
+    result = runner.invoke(app, ["fixup-url"])
+    assert result.exit_code == 0
+
+    # Verify output
+    assert "Found 1 tasks to update" in result.stdout
+    assert "Updated task with title: Example Org" in result.stdout
+    assert "Moved URL to note" not in result.stdout  # URL was already in note
+
+    # Verify only title was updated, note wasn't touched
+    mock_manager.update_task_note.assert_not_called()
+    mock_manager.update_task_name.assert_called_once_with("task1", "Example Org")
+
+    # Verify URL request
+    mock_requests.get.assert_called_once_with(
+        "https://example.org",
+        headers={'User-Agent': 'Mozilla/5.0'}
+    )
+
+
+@patch("omnifocus.requests")
+@patch("omnifocus.manager")
+def test_fixup_url_note_update_error(mock_manager, mock_requests):
+    """Test error handling in fixup_url command when updating note and title."""
+    # Mock tasks with URLs as names
+    mock_manager.get_incomplete_tasks.return_value = [
+        {
+            "id": "task1",
+            "name": "https://example.com",  # URL as name
+            "note": ""
+        }
+    ]
+
+    # Mock update_task_note to fail with a proper Exception
+    mock_manager.update_task_note.side_effect = RuntimeError("Failed to update note")
+
+    # Run the command
+    result = runner.invoke(app, ["fixup-url"])
+    assert result.exit_code == 0
+
+    # Verify error output
+    assert "Found 1 tasks to update" in result.stdout
+    assert "Error processing task: Failed to update note" in result.stdout
+
+    # Verify title wasn't updated after note update failed
+    mock_manager.update_task_name.assert_not_called()
+    mock_requests.get.assert_not_called()
