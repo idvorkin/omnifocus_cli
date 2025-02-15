@@ -15,6 +15,7 @@ from datetime import datetime
 import requests
 from bs4 import BeautifulSoup
 import uuid
+import time
 
 app = typer.Typer(
     help="OmniFocus CLI - Manage OmniFocus from the command line",
@@ -208,6 +209,36 @@ class OmniFocusManager:
         result = self.system.run_javascript(javascript)
         tasks_data = json.loads(result)
         return [Task.model_validate(task) for task in tasks_data]
+
+    def complete_task(self, task_id: str) -> str:
+        """Complete a task by its ID.
+        
+        Args:
+            task_id: The ID of the task to complete
+            
+        Returns:
+            str: Success message if task was completed
+            
+        Raises:
+            Exception: If task couldn't be found or completed
+        """
+        javascript = f"""
+            function run() {{
+                const of = Application('OmniFocus');
+                of.includeStandardAdditions = true;
+
+                const doc = of.defaultDocument;
+                const task = doc.flattenedTasks.whose({{id: "{task_id}"}})()[0];
+
+                if (task) {{
+                    task.markComplete();
+                    return "Task completed successfully";
+                }} else {{
+                    throw new Error("Task not found");
+                }}
+            }}
+        """
+        return self.system.run_javascript(javascript)
 
 
 def sanitize_task_text(task: str) -> str:
@@ -491,7 +522,17 @@ def fixup_url():
 def test_tag(tag_name: Annotated[str, typer.Argument(help="Name of tag to create and assign")]):
     """Test tag creation and assignment by creating a test task with the specified tag"""
     test_name = f"TEST-{uuid.uuid4().hex[:8]}"
-    manager.add_task(test_name, note="This is a test task")
+    manager.add_task(test_name, tags=[tag_name], note=f"Test task with tag: {tag_name}")
+    print(f"Created test task '{test_name}' with tag '{tag_name}'")
+    
+    # Get tasks to verify tag was assigned
+    tasks = manager.get_all_tasks()
+    test_task = next((task for task in tasks if task.name == test_name), None)
+    
+    if test_task and tag_name in test_task.tags:
+        print(f"✓ Successfully verified tag '{tag_name}' was assigned to task")
+    else:
+        print(f"✗ Could not verify tag '{tag_name}' was assigned to task")
 
 
 @app.command()
@@ -560,40 +601,26 @@ def interesting():
 
 @app.command()
 def test_complete():
-    """Test task completion by creating a task, completing it, and verifying the completion."""
-    # First create a task with a unique name
-    test_name = f"TEST-{uuid.uuid4().hex[:8]}"
-    manager.add_task(test_name, note="This is a test task for completion")
-
-    print(f"Created test task: {test_name}")
-
-    # Get the task ID
+    """Test the task completion functionality by completing a test task."""
+    # First create a test task
+    test_task_name = f"Test task {uuid.uuid4()}"
+    manager.add_task(test_task_name, project="today", flagged=True)
+    
+    # Get all incomplete tasks
     tasks = manager.get_incomplete_tasks()
-    task_id = None
-    for task in tasks:
-        if task['name'] == test_name:
-            task_id = task['id']
-            break
-
-    if not task_id:
-        print("Could not find test task to complete")
-        return
-
-    try:
-        result = manager.complete_task(task_id)
-        print(result)
-
-        # Verify task is no longer in incomplete tasks
-        tasks_after = manager.get_incomplete_tasks()
-        still_exists = any(task['id'] == task_id for task in tasks_after)
-
-        if not still_exists:
-            print("✓ Verified task is no longer in incomplete tasks")
-        else:
-            print("✗ Task is still showing as incomplete")
-
-    except Exception as e:
-        print(f"Error completing task: {e}")
+    
+    # Find our test task
+    test_task = next((task for task in tasks if task["name"] == test_task_name), None)
+    
+    if test_task:
+        try:
+            result = manager.complete_task(test_task["id"])
+            typer.echo(f"Successfully completed test task: {test_task_name}")
+            typer.echo(f"Result: {result}")
+        except Exception as e:
+            typer.echo(f"Error completing task: {str(e)}", err=True)
+    else:
+        typer.echo("Could not find the test task. It may not have been created properly.", err=True)
 
 
 if __name__ == "__main__":

@@ -218,6 +218,29 @@ def test_get_flagged_tasks(manager, mock_system):
     assert tasks[0].creation_date == datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc)
 
 
+def test_complete_task(manager, mock_system):
+    """Test completing a task by ID."""
+    # Test successful task completion
+    task_id = "ABC123"
+    mock_system.run_javascript.return_value = "Task completed successfully"
+    
+    result = manager.complete_task(task_id)
+    assert result == "Task completed successfully"
+    
+    # Verify the JavaScript was called with correct parameters
+    mock_system.run_javascript.assert_called_once()
+    js_call = mock_system.run_javascript.call_args[0][0]
+    assert f'id: "{task_id}"' in js_call
+    assert "task.completed = true" in js_call
+    
+    # Test task not found
+    mock_system.reset_mock()
+    mock_system.run_javascript.side_effect = Exception("Task not found")
+    
+    with pytest.raises(Exception, match="Task not found"):
+        manager.complete_task("nonexistent_id")
+
+
 @patch("omnifocus.manager")
 @patch("omnifocus.system")
 def test_add_from_clipboard_with_existing_tasks(mock_system_global, mock_manager_global):
