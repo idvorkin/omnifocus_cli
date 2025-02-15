@@ -1,0 +1,15 @@
+---
+description: Global project rules
+globs: *py
+---
+
+# Making changes
+
+Put changes in the humble objects
+
+# Running omnifocus
+
+It should be installed as editable so you can run it directly.  If that fails, ask the user if they want to global install
+
+
+
