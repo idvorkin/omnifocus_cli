@@ -624,8 +624,10 @@ def test_complete():
 
 
 @app.command()
-def complete():
-    """List interesting tasks and complete one by number."""
+def complete(
+    task_nums: Annotated[str, typer.Argument(help="Space separated list of task numbers to complete")] = "",
+):
+    """List interesting tasks and complete specified task numbers."""
     # Get both inbox and flagged tasks
     inbox_tasks = manager.get_inbox_tasks()
     flagged_tasks = manager.get_flagged_tasks()
@@ -662,37 +664,60 @@ def complete():
         flag = "🚩 " if task.flagged else ""
         print(f"{i:2d}. {flag}{task.name}{project}{tags}{due}{created} ({source})")
 
-    # Get task number to complete
+    # If no task numbers provided, prompt for input
+    if not task_nums:
+        try:
+            task_nums = typer.prompt("\nEnter task numbers to complete (space separated, or Ctrl+C to cancel)")
+        except (KeyboardInterrupt, typer.Abort):
+            typer.echo("\nOperation cancelled")
+            return
+
+    # Process task numbers
     try:
-        task_num = typer.prompt("\nEnter task number to complete (or Ctrl+C to cancel)")
-        task_num = int(task_num)
+        numbers = [int(num) for num in task_nums.split()]
+        invalid_nums = [num for num in numbers if num < 1 or num > len(all_tasks)]
         
-        if task_num < 1 or task_num > len(all_tasks):
-            typer.echo(f"Invalid task number. Please enter a number between 1 and {len(all_tasks)}")
+        if invalid_nums:
+            typer.echo(f"Invalid task numbers: {invalid_nums}. Please enter numbers between 1 and {len(all_tasks)}")
             return
-            
-        # Get task ID for the selected task
-        tasks = manager.get_incomplete_tasks()
-        selected_task_name = all_tasks[task_num - 1][1].name
-        task_to_complete = next((task for task in tasks if task["name"] == selected_task_name), None)
+
+        # Get all incomplete tasks once to look up IDs
+        incomplete_tasks = manager.get_incomplete_tasks()
         
-        if not task_to_complete:
-            typer.echo("Could not find the selected task. It may have been completed already.")
-            return
-            
-        # Complete the task
-        result = manager.complete_task(task_to_complete["id"])
-        typer.echo(f"✓ Completed task: {selected_task_name}")
-        typer.echo(f"Result: {result}")
+        # Complete each task
+        completed = []
+        errors = []
         
-    except (KeyboardInterrupt, typer.Abort):
-        typer.echo("\nOperation cancelled")
-        return
-    except ValueError:
-        typer.echo("Please enter a valid number")
+        for num in numbers:
+            selected_task_name = all_tasks[num - 1][1].name
+            task_to_complete = next((task for task in incomplete_tasks if task["name"] == selected_task_name), None)
+            
+            if not task_to_complete:
+                errors.append(f"Could not find task {num}: {selected_task_name} (may be completed already)")
+                continue
+                
+            try:
+                result = manager.complete_task(task_to_complete["id"])
+                completed.append(f"✓ {num}: {selected_task_name}")
+            except Exception as e:
+                errors.append(f"Error completing task {num}: {selected_task_name} - {str(e)}")
+        
+        # Print results
+        if completed:
+            typer.echo("\nCompleted tasks:")
+            for msg in completed:
+                typer.echo(msg)
+                
+        if errors:
+            typer.echo("\nErrors:")
+            for msg in errors:
+                typer.echo(msg)
+                
+    except ValueError as e:
+        typer.echo("Please enter valid numbers separated by spaces")
         return
     except Exception as e:
-        typer.echo(f"Error completing task: {str(e)}")
+        typer.echo(f"Error: {str(e)}")
         return
 
 
