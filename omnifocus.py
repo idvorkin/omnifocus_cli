@@ -579,25 +579,8 @@ def test_complete():
         print("Could not find test task to complete")
         return
 
-    # Complete the task
-    complete_script = f"""
-        function run() {{
-            const of = Application('OmniFocus');
-            of.includeStandardAdditions = true;
-
-            const doc = of.defaultDocument;
-            const tasks = doc.flattenedTasks.whose({{id: "{task_id}"}})();
-
-            if (tasks.length > 0) {{
-                const task = tasks[0];
-                task.markComplete();
-                return "Task completed successfully";
-            }}
-            return "Task not found";
-        }}
-    """
     try:
-        result = system.run_javascript(complete_script)
+        result = manager.complete_task(task_id)
         print(result)
 
         # Verify task is no longer in incomplete tasks
