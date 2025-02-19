@@ -257,6 +257,58 @@ class OmniFocusManager:
         """
         return self.system.run_javascript(javascript)
 
+    def get_all_tags(self) -> List[str]:
+        """Get all tags from OmniFocus.
+        
+        Returns:
+            List[str]: List of all tag names in OmniFocus
+        """
+        javascript = """
+            function run() {
+                const of = Application('OmniFocus');
+                of.includeStandardAdditions = true;
+
+                const doc = of.defaultDocument;
+                const tags = doc.flattenedTags();
+                
+                const tagNames = tags.map(tag => tag.name());
+                return JSON.stringify(tagNames);
+            }
+        """
+        result = self.system.run_javascript(javascript)
+        return json.loads(result)
+
+    def delete_untitled_tags(self) -> int:
+        """Delete all tags titled 'Untitled Tag' or with empty names.
+        
+        Returns:
+            int: Number of tags deleted
+        """
+        javascript = """
+            function run() {
+                const of = Application('OmniFocus');
+                of.includeStandardAdditions = true;
+
+                const doc = of.defaultDocument;
+                const emptyTags = doc.flattenedTags.whose({name: ''})();
+                const untitledTags = doc.flattenedTags.whose({name: 'Untitled Tag'})();
+                
+                const count = emptyTags.length + untitledTags.length;
+                
+                emptyTags.forEach(tag => {
+                    tag.delete();
+                });
+                
+                untitledTags.forEach(tag => {
+                    tag.delete();
+                });
+                
+                return count;
+            }
+        """
+        result = self.system.run_javascript(javascript)
+        return int(result)
+
 
 def sanitize_task_text(task: str) -> str:
     """Clean up a task string by removing markers and formatting."""
@@ -749,6 +801,27 @@ def complete(
     except Exception as e:
         typer.echo(f"Error: {str(e)}")
         return
+
+
+@app.command(name="list-tags")
+def list_tags():
+    """List all tags in OmniFocus."""
+    system = OSXSystem()
+    manager = OmniFocusManager(system)
+    tags = manager.get_all_tags()
+    for tag in sorted(tags):
+        typer.echo(tag)
+
+@app.command(name="cleanup-tags")
+def cleanup_tags():
+    """Delete all empty tags and 'Untitled Tag' tags from OmniFocus."""
+    system = OSXSystem()
+    manager = OmniFocusManager(system)
+    count = manager.delete_untitled_tags()
+    if count == 0:
+        typer.echo("No empty or untitled tags found.")
+    else:
+        typer.echo(f"Deleted {count} empty/untitled tag{'s' if count > 1 else ''}.")
 
 
 if __name__ == "__main__":
