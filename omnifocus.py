@@ -10,7 +10,7 @@ import re
 import json
 from enum import Enum
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Union
 from datetime import datetime
 import requests
 from bs4 import BeautifulSoup
@@ -33,6 +33,8 @@ class Task(BaseModel):
     tags: List[str] = Field(default_factory=list)
     due_date: Optional[datetime] = None
     creation_date: Optional[datetime] = None
+    id: Optional[str] = None
+    note: Optional[str] = None
 
 
 class OSXSystem:
@@ -88,7 +90,9 @@ class OmniFocusManager:
                     flagged: task.flagged(),
                     tags: Array.from(task.tags()).map(t => t.name()),
                     due_date: task.dueDate() ? task.dueDate().toISOString() : null,
-                    creation_date: task.creationDate() ? task.creationDate().toISOString() : null
+                    creation_date: task.creationDate() ? task.creationDate().toISOString() : null,
+                    id: task.id(),
+                    note: task.note()
                 }}));
 
                 return JSON.stringify(taskList);
@@ -145,7 +149,7 @@ class OmniFocusManager:
         ic("Running", url)
         self.system.open_url(url)
 
-    def get_incomplete_tasks(self) -> List[dict]:
+    def get_incomplete_tasks(self) -> List[Task]:
         """Get all incomplete tasks with their IDs, names and notes."""
         javascript = """
             function run() {
@@ -158,48 +162,103 @@ class OmniFocusManager:
                 const taskList = tasks.map(task => ({
                     id: task.id(),
                     name: task.name(),
-                    note: task.note()
+                    note: task.note(),
+                    project: task.containingProject() ? task.containingProject().name() : "No Project",
+                    flagged: task.flagged(),
+                    tags: Array.from(task.tags()).map(t => t.name()),
+                    due_date: task.dueDate() ? task.dueDate().toISOString() : null,
+                    creation_date: task.creationDate() ? task.creationDate().toISOString() : null
                 }));
 
                 return JSON.stringify(taskList);
             }
         """
         result = self.system.run_javascript(javascript)
-        return json.loads(result)
+        tasks_data = json.loads(result)
+        return [Task.model_validate(task) for task in tasks_data]
 
-    def update_task_name(self, task_id: str, new_name: str) -> None:
-        """Update a task's name by ID."""
+    def update_name(self, task: Task, new_name: str) -> None:
+        """Update a task's name using a Task object.
+        
+        Args:
+            task: The Task object to update
+            new_name: The new name for the task
+        """
         update_script = f"""
             function run() {{
                 const of = Application('OmniFocus');
                 of.includeStandardAdditions = true;
 
                 const doc = of.defaultDocument;
-                const task = doc.flattenedTasks.whose({{id: "{task_id}"}})()[0];
+                const task = doc.flattenedTasks.whose({{id: "{task.id}"}})()[0];
 
                 if (task) {{
-                    task.name = "{new_name.replace('"', '\\"')}";
+                    task.name = "{new_name.replace('"', '\"')}";
                 }}
             }}
         """
         self.system.run_javascript(update_script)
 
-    def update_task_note(self, task_id: str, note: str) -> None:
-        """Update a task's note by ID."""
+    def update_task(self, task: Task, new_name: str) -> None:
+        """Update a task's name using a Task object (alias for update_name).
+        
+        Args:
+            task: The Task object to update
+            new_name: The new name for the task
+            
+        Raises:
+            ValueError: If task doesn't have an ID
+        """
+        return self.update_name(task, new_name)
+
+    def update_note(self, task: Task, note: str) -> None:
+        """Update a task's note using a Task object.
+        
+        Args:
+            task: The Task object to update
+            note: The new note for the task
+        """
         update_script = f"""
             function run() {{
                 const of = Application('OmniFocus');
                 of.includeStandardAdditions = true;
 
                 const doc = of.defaultDocument;
-                const task = doc.flattenedTasks.whose({{id: "{task_id}"}})()[0];
+                const task = doc.flattenedTasks.whose({{id: "{task.id}"}})()[0];
 
                 if (task) {{
-                    task.note = "{note.replace('"', '\\"')}";
+                    task.note = "{note.replace('"', '\"')}";
                 }}
             }}
         """
         self.system.run_javascript(update_script)
+
+    def append_to_task(self, task: Task, note_text: str) -> None:
+        """Append text to a task's existing note using a Task object.
+        
+        Args:
+            task: The Task object to append to
+            note_text: The text to append to the task's note
+        """
+        append_script = f"""
+            function run() {{
+                const of = Application('OmniFocus');
+                of.includeStandardAdditions = true;
+
+                const doc = of.defaultDocument;
+                const task = doc.flattenedTasks.whose({{id: "{task.id}"}})()[0];
+
+                if (task) {{
+                    const currentNote = task.note();
+                    const separator = currentNote && currentNote.length > 0 ? "\n\n" : "";
+                    task.note = currentNote + separator + "{note_text.replace('"', '\"')}";
+                    return "Note appended successfully";
+                }} else {{
+                    throw new Error("Task not found");
+                }}
+            }}
+        """
+        return self.system.run_javascript(append_script)
 
     def get_inbox_tasks(self) -> List[Task]:
         """Get all tasks from the inbox."""
@@ -217,7 +276,9 @@ class OmniFocusManager:
                     flagged: task.flagged(),
                     tags: Array.from(task.tags()).map(t => t.name()),
                     due_date: task.dueDate() ? task.dueDate().toISOString() : null,
-                    creation_date: task.creationDate() ? task.creationDate().toISOString() : null
+                    creation_date: task.creationDate() ? task.creationDate().toISOString() : null,
+                    id: task.id(),
+                    note: task.note()
                 }));
 
                 return JSON.stringify(taskList);
@@ -227,17 +288,14 @@ class OmniFocusManager:
         tasks_data = json.loads(result)
         return [Task.model_validate(task) for task in tasks_data]
 
-    def complete_task(self, task_id: str) -> str:
-        """Complete a task by its ID.
+    def complete(self, task: Task) -> str:
+        """Complete a task using a Task object.
         
         Args:
-            task_id: The ID of the task to complete
-            
+            task: The Task object to complete
+        
         Returns:
             str: Success message if task was completed
-            
-        Raises:
-            Exception: If task couldn't be found or completed
         """
         javascript = f"""
             function run() {{
@@ -245,7 +303,7 @@ class OmniFocusManager:
                 of.includeStandardAdditions = true;
 
                 const doc = of.defaultDocument;
-                const task = doc.flattenedTasks.whose({{id: "{task_id}"}})()[0];
+                const task = doc.flattenedTasks.whose({{id: "{task.id}"}})()[0];
 
                 if (task) {{
                     task.markComplete();
@@ -256,27 +314,6 @@ class OmniFocusManager:
             }}
         """
         return self.system.run_javascript(javascript)
-
-    def get_all_tags(self) -> List[str]:
-        """Get all tags from OmniFocus.
-        
-        Returns:
-            List[str]: List of all tag names in OmniFocus
-        """
-        javascript = """
-            function run() {
-                const of = Application('OmniFocus');
-                of.includeStandardAdditions = true;
-
-                const doc = of.defaultDocument;
-                const tags = doc.flattenedTags();
-                
-                const tagNames = tags.map(tag => tag.name());
-                return JSON.stringify(tagNames);
-            }
-        """
-        result = self.system.run_javascript(javascript)
-        return json.loads(result)
 
     def delete_untitled_tags(self) -> int:
         """Delete all tags titled 'Untitled Tag' or with empty names.
@@ -308,6 +345,27 @@ class OmniFocusManager:
         """
         result = self.system.run_javascript(javascript)
         return int(result)
+
+    def get_all_tags(self) -> List[str]:
+        """Get all tags from OmniFocus.
+        
+        Returns:
+            List[str]: List of all tag names in OmniFocus
+        """
+        javascript = """
+            function run() {
+                const of = Application('OmniFocus');
+                of.includeStandardAdditions = true;
+
+                const doc = of.defaultDocument;
+                const tags = doc.flattenedTags();
+                
+                const tagNames = tags.map(tag => tag.name());
+                return JSON.stringify(tagNames);
+            }
+        """
+        result = self.system.run_javascript(javascript)
+        return json.loads(result)
 
 
 def sanitize_task_text(task: str) -> str:
@@ -549,19 +607,20 @@ def add(
 @app.command()
 def fixup_url():
     """Find tasks that have empty names or URLs as names, and update them with webpage titles."""
-    tasks_data = manager.get_incomplete_tasks()
+    all_tasks = manager.get_all_tasks()
 
     # Find tasks with URLs in notes or as names
     url_pattern = r'(https?://[^\s)"]+)'
     tasks_to_update = []
-    for task in tasks_data:
-        if task['note']:
-            urls = re.findall(url_pattern, task['note'])
-            if urls and not task['name'].strip():  # Empty name with URL in note
-                tasks_to_update.append((task['id'], urls[0], task['note']))  # Take the first URL found
+    for task in all_tasks:
+        # Check if there's a URL in the note and the task name is empty
+        if hasattr(task, 'note') and task.note:
+            urls = re.findall(url_pattern, task.note)
+            if urls and not task.name.strip():  # Empty name with URL in note
+                tasks_to_update.append((task, urls[0], task.note))  # Take the first URL found
         # Also check if the task name itself is a URL
-        elif re.match(url_pattern, task['name'].strip()):
-            tasks_to_update.append((task['id'], task['name'].strip(), ""))
+        elif re.match(url_pattern, task.name.strip()):
+            tasks_to_update.append((task, task.name.strip(), ""))
 
     if not tasks_to_update:
         print("No tasks found that need URL fixup")
@@ -570,13 +629,13 @@ def fixup_url():
     print(f"Found {len(tasks_to_update)} tasks to update")
 
     # Update each task
-    for task_id, url, existing_note in tasks_to_update:
+    for task, url, existing_note in tasks_to_update:
         try:
             # First, ensure URL is in the note if it was in the name
             if not existing_note:
                 try:
                     note = f"Source: {url}"
-                    manager.update_task_note(task_id, note)
+                    manager.update_note(task, note)
                     print(f"✓ Moved URL to note: {url}")
                 except Exception as e:
                     print(f"✗ Error processing task: {str(e)}")
@@ -591,7 +650,7 @@ def fixup_url():
             title = soup.title.string.strip() if soup.title else url
 
             # Update the task name
-            manager.update_task_name(task_id, title)
+            manager.update_name(task, title)
             print(f"✓ Updated task with title: {title}")
 
         except requests.exceptions.RequestException as e:
@@ -624,19 +683,74 @@ def test_update():
     test_name = f"TEST-{uuid.uuid4().hex[:8]}"
     manager.add_task(test_name, note="This is a test task")
 
-    # Get the task ID
-    tasks = manager.get_incomplete_tasks()
-    task_id = None
-    for task in tasks:
-        if task['name'] == test_name:
-            task_id = task['id']
-            break
+    # Get all tasks and find our test task
+    all_tasks = manager.get_all_tasks()
+    test_task = next((task for task in all_tasks if task.name == test_name), None)
 
-    if task_id:
-        # Update the task name
+    if test_task:
+        # Update the task name using the Task object
         new_name = f"UPDATED-{uuid.uuid4().hex[:8]}"
         print(f"Updating task name from '{test_name}' to '{new_name}'")
-        manager.update_task_name(task_id, new_name)
+        manager.update_name(test_task, new_name)
+    else:
+        print("Could not find test task to update")
+
+
+@app.command()
+def test_append():
+    """Test appending to a task's note by creating a task and appending to its note"""
+    # First create a task with a unique name
+    test_name = f"TEST-{uuid.uuid4().hex[:8]}"
+    manager.add_task(test_name, note="This is the initial note")
+    
+    # Get all tasks and find our test task
+    all_tasks = manager.get_all_tasks()
+    test_task = next((task for task in all_tasks if task.name == test_name), None)
+    
+    if test_task:
+        # Append to the task note
+        append_text = f"Appended at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        print(f"Appending to task '{test_name}' note: '{append_text}'")
+        print(f"Original note: '{test_task.note}'")
+        
+        # Use the append_to_task method
+        result = manager.append_to_task(test_task, append_text)
+        print(f"Result: {result}")
+        
+        # Verify the note was updated
+        updated_tasks = manager.get_all_tasks()
+        updated_task = next((task for task in updated_tasks if task.name == test_name), None)
+        if updated_task:
+            print(f"Updated note: '{updated_task.note}'")
+    else:
+        print("Could not find test task to update")
+
+
+@app.command()
+def test_append_pydantic():
+    """Test appending to a task's note using a Pydantic Task object"""
+    # First create a task with a unique name
+    test_name = f"TEST-{uuid.uuid4().hex[:8]}"
+    manager.add_task(test_name, note="This is the initial note")
+    
+    # Get all tasks and find our test task
+    all_tasks = manager.get_all_tasks()
+    test_task = next((task for task in all_tasks if task.name == test_name), None)
+    
+    if test_task:
+        # Append to the task note
+        append_text = f"Appended at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        print(f"Appending to task '{test_name}' note: '{append_text}'")
+        
+        # Use the append_to_task method with a Pydantic Task object
+        result = manager.append_to_task(test_task, append_text)
+        print(f"Result: {result}")
+        
+        # Verify the note was updated by getting the task again
+        updated_tasks = manager.get_all_tasks()
+        updated_task = next((task for task in updated_tasks if task.name == test_name), None)
+        if updated_task:
+            print(f"Updated note: '{updated_task.note}'")
     else:
         print("Could not find test task to update")
 
@@ -688,15 +802,13 @@ def test_complete():
     test_task_name = f"Test task {uuid.uuid4()}"
     manager.add_task(test_task_name, project="today", flagged=True)
     
-    # Get all incomplete tasks
-    tasks = manager.get_incomplete_tasks()
-    
-    # Find our test task
-    test_task = next((task for task in tasks if task["name"] == test_task_name), None)
+    # Get all tasks and find our test task
+    all_tasks = manager.get_all_tasks()
+    test_task = next((task for task in all_tasks if task.name == test_task_name), None)
     
     if test_task:
         try:
-            result = manager.complete_task(test_task["id"])
+            result = manager.complete(test_task)
             typer.echo(f"Successfully completed test task: {test_task_name}")
             typer.echo(f"Result: {result}")
         except Exception as e:
@@ -762,27 +874,19 @@ def complete(
         if invalid_nums:
             typer.echo(f"Invalid task numbers: {invalid_nums}. Please enter numbers between 1 and {len(all_tasks)}")
             return
-
-        # Get all incomplete tasks once to look up IDs
-        incomplete_tasks = manager.get_incomplete_tasks()
         
         # Complete each task
         completed = []
         errors = []
         
         for num in numbers:
-            selected_task_name = all_tasks[num - 1][1].name
-            task_to_complete = next((task for task in incomplete_tasks if task["name"] == selected_task_name), None)
+            selected_task = all_tasks[num - 1][1]
             
-            if not task_to_complete:
-                errors.append(f"Could not find task {num}: {selected_task_name} (may be completed already)")
-                continue
-                
             try:
-                result = manager.complete_task(task_to_complete["id"])
-                completed.append(f"✓ {num}: {selected_task_name}")
+                result = manager.complete(selected_task)
+                completed.append(f"✓ {num}: {selected_task.name}")
             except Exception as e:
-                errors.append(f"Error completing task {num}: {selected_task_name} - {str(e)}")
+                errors.append(f"Error completing task {num}: {selected_task.name} - {str(e)}")
         
         # Print results
         if completed:
