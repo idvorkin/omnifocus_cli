@@ -33,121 +33,121 @@ _****_
         
 | File | Line | Match |
 |------|------|-------|
-| `file:///Users/idvorkin/gits/omnifocus_cli/.gitignore` | L24 | `.pytest_cache/` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/pyproject.toml` | L36 | `python_files = ["test_*.py"]` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L603 | `def test_tag(tag_name: Annotated[str, typer.Argument(help="Name of tag to create and assign")]):` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L605 | `test_name = f"TEST-{uuid.uuid4().hex[:8]}"` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L606 | `manager.add_task(test_name, tags=[tag_name], note=f"Test task with tag: {tag_name}")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L607 | `print(f"Created test task '{test_name}' with tag '{tag_name}'")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L611 | `test_task = next((task for task in tasks if task.name == test_name), None)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L613 | `if test_task and tag_name in test_task.tags:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L620 | `def test_update():` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L623 | `test_name = f"TEST-{uuid.uuid4().hex[:8]}"` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L624 | `manager.add_task(test_name, note="This is a test task")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L630 | `if task['name'] == test_name:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L637 | `print(f"Updating task name from '{test_name}' to '{new_name}'")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L684 | `def test_complete():` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L687 | `test_task_name = f"Test task {uuid.uuid4()}"` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L688 | `manager.add_task(test_task_name, project="today", flagged=True)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L694 | `test_task = next((task for task in tasks if task["name"] == test_task_name), None)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L696 | `if test_task:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L698 | `result = manager.complete_task(test_task["id"])` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L699 | `typer.echo(f"Successfully completed test task: {test_task_name}")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L37 | `| `tests/unit/test_omnifocus.py` | L308-330 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L38 | `| `tests/unit/test_omnifocus.py` | L308-330 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L39 | `| `tests/unit/test_omnifocus.py` | L251-281 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L40 | `| `tests/unit/test_omnifocus.py` | L251-281 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L44 | `| `tests/unit/test_omnifocus.py` | L151-192 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L45 | `| `tests/unit/test_omnifocus.py` | L151-192 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L47 | `| `tests/unit/test_omnifocus.py` | L61-105 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L160 | `- Line 517: In the `test_complete` function at the module level, outside of the `OmniFocusManager` class` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L162 | `The issue is with the `test_complete` function. It's currently defining and executing JavaScript directly, rather than going through the `OmniFocusManager` class. This breaks the pattern and reduces maintainability.` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L189 | `2. Then the `test_complete` function should be updated to use this method:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L192 | `def test_complete():` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L194 | `test_name = f"TEST-{uuid.uuid4().hex[:8]}"` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L195 | `manager.add_task(test_name, note="This is a test task for completion")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L197 | `print(f"Created test task: {test_name}")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L203 | `if task['name'] == test_name:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L286 | `Now I'll update the `test_complete` function to use the new `complete_task` method.` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L328 | `2. Updated the `test_complete` function to use this new method instead of directly running JavaScript.` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L348 | `I'll run the test_complete command to verify the changes work correctly.` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L31 | `def test_sanitize_task_text():` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L40 | `def test_extract_tags_from_task():` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L63 | `def test_add_task(manager, mock_system):` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L107 | `def test_add_task_escaping(manager, mock_system):` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L122 | `def test_add_from_clipboard(mock_system_global, mock_manager_global):` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L153 | `def test_get_all_tasks(manager, mock_system):` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L194 | `def test_get_flagged_tasks(manager, mock_system):` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L220 | `def test_complete_task(manager, mock_system):` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L245 | `def test_add_from_clipboard_with_existing_tasks(mock_system_global, mock_manager_global):` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L278 | `def test_add_command_with_url(mock_system_global, mock_requests):` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L308 | `def test_add_command_with_url_error_handling(mock_system_global, mock_requests):` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L334 | `def test_add_command_with_regular_task(mock_system_global):` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L357 | `def test_fixup_url(mock_manager, mock_requests):` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L410 | `def test_fixup_url_error_handling(mock_manager, mock_requests):` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L453 | `def test_fixup_url_with_url_names(mock_manager, mock_requests):` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L506 | `def test_fixup_url_with_url_in_name(mock_manager, mock_requests):` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L544 | `def test_fixup_url_with_url_in_note(mock_manager, mock_requests):` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L582 | `def test_fixup_url_note_update_error(mock_manager, mock_requests):` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L24 | `| `tests/unit/test_omnifocus.py` | L353-406 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L25 | `| `tests/unit/test_omnifocus.py` | L406-449 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L29 | `| `tests/unit/test_omnifocus.py` | L304-331 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L31 | `| `tests/unit/test_omnifocus.py` | L274-304 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L34 | `| `tests/unit/test_omnifocus.py` | L331-353 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L35 | `| `tests/unit/test_omnifocus.py` | L105-118 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L37 | `| `tests/unit/test_omnifocus.py` | L61-105 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L39 | `| `tests/unit/test_omnifocus.py` | L27-38 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L40 | `| `tests/unit/test_omnifocus.py` | L55-61 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L45 | `| `tests/unit/test_omnifocus.py` | L49-55 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L46 | `| `tests/unit/test_omnifocus.py` | L1-27 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L69 | `| `tests/unit/test_omnifocus.py` | L353-406 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L70 | `| `tests/unit/test_omnifocus.py` | L406-449 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L73 | `| `tests/unit/test_omnifocus.py` | L304-331 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L75 | `| `tests/unit/test_omnifocus.py` | L274-304 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L77 | `| `tests/unit/test_omnifocus.py` | L105-118 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L78 | `| `tests/unit/test_omnifocus.py` | L331-353 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L80 | `| `tests/unit/test_omnifocus.py` | L61-105 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L84 | `| `tests/unit/test_omnifocus.py` | L55-61 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L86 | `| `tests/unit/test_omnifocus.py` | L49-55 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L89 | `| `tests/unit/test_omnifocus.py` | L27-38 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L90 | `| `tests/unit/test_omnifocus.py` | L1-27 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L214 | `Yes, there are tests for the `fixup_url` functionality in `tests/unit/test_omnifocus.py`. Let me show you the relevant test cases:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L221 | `<summary>Searched codebase "test_fixup_url function" • **25** results</summary>` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L225 | `| `tests/unit/test_omnifocus.py` | L353-406 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L226 | `| `tests/unit/test_omnifocus.py` | L406-449 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L228 | `| `tests/unit/test_omnifocus.py` | L304-331 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L229 | `| `tests/unit/test_omnifocus.py` | L274-304 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L230 | `| `tests/unit/test_omnifocus.py` | L105-118 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L231 | `| `tests/unit/test_omnifocus.py` | L331-353 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L232 | `| `tests/unit/test_omnifocus.py` | L55-61 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L233 | `| `tests/unit/test_omnifocus.py` | L61-105 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L234 | `| `tests/unit/test_omnifocus.py` | L49-55 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L235 | `| `tests/unit/test_omnifocus.py` | L27-38 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L237 | `| `tests/unit/test_omnifocus.py` | L1-27 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L238 | `| `tests/unit/test_omnifocus.py` | L218-241 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L240 | `| `tests/unit/test_omnifocus.py` | L38-49 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L244 | `| `tests/unit/test_omnifocus.py` | L192-218 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L247 | `| `tests/unit/test_omnifocus.py` | L118-151 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L248 | `| `tests/unit/test_omnifocus.py` | L241-274 |` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L261 | `1. `test_fixup_url`: Tests the basic functionality:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L603 | `def test_tag(tag_name: Annotated[str, typer.Argument(help="Name of tag to create and assign")]):` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L605 | `test_name = f"TEST-{uuid.uuid4().hex[:8]}"` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L606 | `manager.add_task(test_name, tags=[tag_name], note=f"Test task with tag: {tag_name}")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L607 | `print(f"Created test task '{test_name}' with tag '{tag_name}'")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L611 | `test_task = next((task for task in tasks if task.name == test_name), None)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L613 | `if test_task and tag_name in test_task.tags:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L620 | `def test_update():` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L623 | `test_name = f"TEST-{uuid.uuid4().hex[:8]}"` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L624 | `manager.add_task(test_name, note="This is a test task")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L630 | `if task['name'] == test_name:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L637 | `print(f"Updating task name from '{test_name}' to '{new_name}'")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L684 | `def test_complete():` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L687 | `test_task_name = f"Test task {uuid.uuid4()}"` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L688 | `manager.add_task(test_task_name, project="today", flagged=True)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L694 | `test_task = next((task for task in tasks if task["name"] == test_task_name), None)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L696 | `if test_task:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L698 | `result = manager.complete_task(test_task["id"])` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L699 | `typer.echo(f"Successfully completed test task: {test_task_name}")` |
+| `file://$HOME/gits/omnifocus_cli/.gitignore` | L24 | `.pytest_cache/` |
+| `file://$HOME/gits/omnifocus_cli/pyproject.toml` | L36 | `python_files = ["test_*.py"]` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L603 | `def test_tag(tag_name: Annotated[str, typer.Argument(help="Name of tag to create and assign")]):` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L605 | `test_name = f"TEST-{uuid.uuid4().hex[:8]}"` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L606 | `manager.add_task(test_name, tags=[tag_name], note=f"Test task with tag: {tag_name}")` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L607 | `print(f"Created test task '{test_name}' with tag '{tag_name}'")` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L611 | `test_task = next((task for task in tasks if task.name == test_name), None)` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L613 | `if test_task and tag_name in test_task.tags:` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L620 | `def test_update():` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L623 | `test_name = f"TEST-{uuid.uuid4().hex[:8]}"` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L624 | `manager.add_task(test_name, note="This is a test task")` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L630 | `if task['name'] == test_name:` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L637 | `print(f"Updating task name from '{test_name}' to '{new_name}'")` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L684 | `def test_complete():` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L687 | `test_task_name = f"Test task {uuid.uuid4()}"` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L688 | `manager.add_task(test_task_name, project="today", flagged=True)` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L694 | `test_task = next((task for task in tasks if task["name"] == test_task_name), None)` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L696 | `if test_task:` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L698 | `result = manager.complete_task(test_task["id"])` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L699 | `typer.echo(f"Successfully completed test task: {test_task_name}")` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L37 | `| `tests/unit/test_omnifocus.py` | L308-330 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L38 | `| `tests/unit/test_omnifocus.py` | L308-330 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L39 | `| `tests/unit/test_omnifocus.py` | L251-281 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L40 | `| `tests/unit/test_omnifocus.py` | L251-281 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L44 | `| `tests/unit/test_omnifocus.py` | L151-192 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L45 | `| `tests/unit/test_omnifocus.py` | L151-192 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L47 | `| `tests/unit/test_omnifocus.py` | L61-105 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L160 | `- Line 517: In the `test_complete` function at the module level, outside of the `OmniFocusManager` class` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L162 | `The issue is with the `test_complete` function. It's currently defining and executing JavaScript directly, rather than going through the `OmniFocusManager` class. This breaks the pattern and reduces maintainability.` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L189 | `2. Then the `test_complete` function should be updated to use this method:` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L192 | `def test_complete():` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L194 | `test_name = f"TEST-{uuid.uuid4().hex[:8]}"` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L195 | `manager.add_task(test_name, note="This is a test task for completion")` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L197 | `print(f"Created test task: {test_name}")` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L203 | `if task['name'] == test_name:` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L286 | `Now I'll update the `test_complete` function to use the new `complete_task` method.` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L328 | `2. Updated the `test_complete` function to use this new method instead of directly running JavaScript.` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L348 | `I'll run the test_complete command to verify the changes work correctly.` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L31 | `def test_sanitize_task_text():` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L40 | `def test_extract_tags_from_task():` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L63 | `def test_add_task(manager, mock_system):` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L107 | `def test_add_task_escaping(manager, mock_system):` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L122 | `def test_add_from_clipboard(mock_system_global, mock_manager_global):` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L153 | `def test_get_all_tasks(manager, mock_system):` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L194 | `def test_get_flagged_tasks(manager, mock_system):` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L220 | `def test_complete_task(manager, mock_system):` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L245 | `def test_add_from_clipboard_with_existing_tasks(mock_system_global, mock_manager_global):` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L278 | `def test_add_command_with_url(mock_system_global, mock_requests):` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L308 | `def test_add_command_with_url_error_handling(mock_system_global, mock_requests):` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L334 | `def test_add_command_with_regular_task(mock_system_global):` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L357 | `def test_fixup_url(mock_manager, mock_requests):` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L410 | `def test_fixup_url_error_handling(mock_manager, mock_requests):` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L453 | `def test_fixup_url_with_url_names(mock_manager, mock_requests):` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L506 | `def test_fixup_url_with_url_in_name(mock_manager, mock_requests):` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L544 | `def test_fixup_url_with_url_in_note(mock_manager, mock_requests):` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L582 | `def test_fixup_url_note_update_error(mock_manager, mock_requests):` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L24 | `| `tests/unit/test_omnifocus.py` | L353-406 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L25 | `| `tests/unit/test_omnifocus.py` | L406-449 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L29 | `| `tests/unit/test_omnifocus.py` | L304-331 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L31 | `| `tests/unit/test_omnifocus.py` | L274-304 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L34 | `| `tests/unit/test_omnifocus.py` | L331-353 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L35 | `| `tests/unit/test_omnifocus.py` | L105-118 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L37 | `| `tests/unit/test_omnifocus.py` | L61-105 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L39 | `| `tests/unit/test_omnifocus.py` | L27-38 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L40 | `| `tests/unit/test_omnifocus.py` | L55-61 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L45 | `| `tests/unit/test_omnifocus.py` | L49-55 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L46 | `| `tests/unit/test_omnifocus.py` | L1-27 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L69 | `| `tests/unit/test_omnifocus.py` | L353-406 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L70 | `| `tests/unit/test_omnifocus.py` | L406-449 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L73 | `| `tests/unit/test_omnifocus.py` | L304-331 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L75 | `| `tests/unit/test_omnifocus.py` | L274-304 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L77 | `| `tests/unit/test_omnifocus.py` | L105-118 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L78 | `| `tests/unit/test_omnifocus.py` | L331-353 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L80 | `| `tests/unit/test_omnifocus.py` | L61-105 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L84 | `| `tests/unit/test_omnifocus.py` | L55-61 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L86 | `| `tests/unit/test_omnifocus.py` | L49-55 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L89 | `| `tests/unit/test_omnifocus.py` | L27-38 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L90 | `| `tests/unit/test_omnifocus.py` | L1-27 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L214 | `Yes, there are tests for the `fixup_url` functionality in `tests/unit/test_omnifocus.py`. Let me show you the relevant test cases:` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L221 | `<summary>Searched codebase "test_fixup_url function" • **25** results</summary>` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L225 | `| `tests/unit/test_omnifocus.py` | L353-406 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L226 | `| `tests/unit/test_omnifocus.py` | L406-449 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L228 | `| `tests/unit/test_omnifocus.py` | L304-331 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L229 | `| `tests/unit/test_omnifocus.py` | L274-304 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L230 | `| `tests/unit/test_omnifocus.py` | L105-118 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L231 | `| `tests/unit/test_omnifocus.py` | L331-353 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L232 | `| `tests/unit/test_omnifocus.py` | L55-61 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L233 | `| `tests/unit/test_omnifocus.py` | L61-105 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L234 | `| `tests/unit/test_omnifocus.py` | L49-55 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L235 | `| `tests/unit/test_omnifocus.py` | L27-38 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L237 | `| `tests/unit/test_omnifocus.py` | L1-27 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L238 | `| `tests/unit/test_omnifocus.py` | L218-241 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L240 | `| `tests/unit/test_omnifocus.py` | L38-49 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L244 | `| `tests/unit/test_omnifocus.py` | L192-218 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L247 | `| `tests/unit/test_omnifocus.py` | L118-151 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L248 | `| `tests/unit/test_omnifocus.py` | L241-274 |` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L261 | `1. `test_fixup_url`: Tests the basic functionality:` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L603 | `def test_tag(tag_name: Annotated[str, typer.Argument(help="Name of tag to create and assign")]):` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L605 | `test_name = f"TEST-{uuid.uuid4().hex[:8]}"` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L606 | `manager.add_task(test_name, tags=[tag_name], note=f"Test task with tag: {tag_name}")` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L607 | `print(f"Created test task '{test_name}' with tag '{tag_name}'")` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L611 | `test_task = next((task for task in tasks if task.name == test_name), None)` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L613 | `if test_task and tag_name in test_task.tags:` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L620 | `def test_update():` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L623 | `test_name = f"TEST-{uuid.uuid4().hex[:8]}"` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L624 | `manager.add_task(test_name, note="This is a test task")` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L630 | `if task['name'] == test_name:` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L637 | `print(f"Updating task name from '{test_name}' to '{new_name}'")` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L684 | `def test_complete():` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L687 | `test_task_name = f"Test task {uuid.uuid4()}"` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L688 | `manager.add_task(test_task_name, project="today", flagged=True)` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L694 | `test_task = next((task for task in tasks if task["name"] == test_task_name), None)` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L696 | `if test_task:` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L698 | `result = manager.complete_task(test_task["id"])` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L699 | `typer.echo(f"Successfully completed test task: {test_task_name}")` |
 
 </details>
 
@@ -799,17 +799,17 @@ Let's run the unit test to make sure everything works as expected:
 _****_
 
 ```bash
-cd /Users/idvorkin/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py::test_append_to_task_with_pydantic -v
+cd $HOME/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py::test_append_to_task_with_pydantic -v
 ```
 
 ```
 =========================================== test session starts ================
 ============================
-platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- /Users/idvorkin/
+platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- $HOME/
 gits/omnifocus_cli/.venv/bin
 /python
                             cachedir: .pytest_cache
-rootdir: /Users/idvorkin/gits/omnifocus_cli
+rootdir: $HOME/gits/omnifocus_cli
 configfile: pyproject.toml
 collected 1 item
                            
@@ -833,11 +833,11 @@ Great! The test for the `append_to_task` method with a Pydantic Task object pass
 _****_
 
 ```bash
-cd /Users/idvorkin/gits/omnifocus_cli && python -m omnifocus test_append_pydantic
+cd $HOME/gits/omnifocus_cli && python -m omnifocus test_append_pydantic
 ```
 
 ```
-❯ cd /Users/idvorkin/gits/omnifocus_cli && python -m omnifocus test_append_pydantic
+❯ cd $HOME/gits/omnifocus_cli && python -m omnifocus test_append_pydantic
 Usage: omnifocus.py [OPTIONS] COMMAND [ARGS]...
 Try 'omnifocus.py --help' for help.
 ╭─ Error ──────────────────────────────────────────────────────────────────────────────────────────────────╮
@@ -859,7 +859,7 @@ It seems the command isn't being recognized. Let's check if we need to install t
 _****_
 
 ```bash
-cd /Users/idvorkin/gits/omnifocus_cli && python -m omnifocus --help
+cd $HOME/gits/omnifocus_cli && python -m omnifocus --help
 ```
 
 ```
@@ -913,11 +913,11 @@ Great! I can see that both `test_append` and `test_append_pydantic` commands are
 _****_
 
 ```bash
-cd /Users/idvorkin/gits/omnifocus_cli && python -m omnifocus test-append-pydantic
+cd $HOME/gits/omnifocus_cli && python -m omnifocus test-append-pydantic
 ```
 
 ```
-❯ cd /Users/idvorkin/gits/omnifocus_cli && python -m omnifocus test-append-pydantic
+❯ cd $HOME/gits/omnifocus_cli && python -m omnifocus test-append-pydantic
 ic| "Running": 'Running'
     url: 'omnifocus:///add?name=TEST-4f763bea&autosave=true&project=today&flag=true&note=This%20is%20the%20i
 nitial%20note'
@@ -969,80 +969,80 @@ _****_
         
 | File | Line | Match |
 |------|------|-------|
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L168 | `def complete_task(self, task_id: str) -> str:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L176 | `const tasks = doc.flattenedTasks.whose({{id: "{task_id}"}})();` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L201 | `task_id = None` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L204 | `task_id = task['id']` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L207 | `if not task_id:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L212 | `result = manager.complete_task(task_id)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L217 | `still_exists = any(task['id'] == task_id for task in tasks_after)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L249 | `+     def complete_task(self, task_id: str) -> str:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L253 | `+             task_id: The ID of the task to complete` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L264 | `+                 const tasks = doc.flattenedTasks.whose({{id: "{task_id}"}})();` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L302 | `-             const tasks = doc.flattenedTasks.whose({{id: "{task_id}"}})();` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L314 | `+         result = manager.complete_task(task_id)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L171 | `def update_task_name(self, task_id: str, new_name: str) -> None:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L179 | `const task = doc.flattenedTasks.whose({{id: "{task_id}"}})()[0];` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L188 | `def update_task_note(self, task_id: str, note: str) -> None:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L196 | `const task = doc.flattenedTasks.whose({{id: "{task_id}"}})()[0];` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L205 | `def append_task_note(self, task_id: str, note_text: str) -> None:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L209 | `task_id: The ID of the task to update` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L218 | `const task = doc.flattenedTasks.whose({{id: "{task_id}"}})()[0];` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L282 | `def complete_task(self, task_id: str) -> str:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L286 | `task_id: The ID of the task to complete` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L300 | `const task = doc.flattenedTasks.whose({{id: "{task_id}"}})()[0];` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L625 | `for task_id, url, existing_note in tasks_to_update:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L631 | `manager.update_task_note(task_id, note)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L646 | `manager.update_task_name(task_id, title)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L681 | `task_id = None` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L684 | `task_id = task['id']` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L687 | `if task_id:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L691 | `manager.update_task_name(task_id, new_name)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L223 | `task_id = "ABC123"` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L226 | `result = manager.complete_task(task_id)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L232 | `assert f'id: "{task_id}"' in js_call` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L240 | `manager.complete_task(task_id)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L246 | `task_id = "ABC123"` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L250 | `result = manager.append_task_note(task_id, note_text)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L256 | `assert f'id: "{task_id}"' in js_call` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L264 | `manager.append_task_note(task_id, note_with_quotes)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L273 | `manager.append_task_note(task_id, note_text)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L104 | `+     def update_task_note(self, task_id: str, note: str) -> None:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L112 | `+                 const task = doc.flattenedTasks.whose({{id: "{task_id}"}})()[0];` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L135 | `-     for task_id, url in tasks_to_update:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L136 | `+     for task_id, url, existing_note in tasks_to_update:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L140 | `manager.update_task_name(task_id, title)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L145 | `+                 manager.update_task_note(task_id, note)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L187 | `for task_id, url, existing_note in tasks_to_update:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L193 | `+                 manager.update_task_note(task_id, note)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L200 | `manager.update_task_name(task_id, title)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L205 | `-                 manager.update_task_note(task_id, note)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L171 | `def update_task_name(self, task_id: str, new_name: str) -> None:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L179 | `const task = doc.flattenedTasks.whose({{id: "{task_id}"}})()[0];` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L188 | `def update_task_note(self, task_id: str, note: str) -> None:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L196 | `const task = doc.flattenedTasks.whose({{id: "{task_id}"}})()[0];` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L205 | `def append_task_note(self, task_id: str, note_text: str) -> None:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L209 | `task_id: The ID of the task to update` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L218 | `const task = doc.flattenedTasks.whose({{id: "{task_id}"}})()[0];` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L282 | `def complete_task(self, task_id: str) -> str:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L286 | `task_id: The ID of the task to complete` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L300 | `const task = doc.flattenedTasks.whose({{id: "{task_id}"}})()[0];` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L625 | `for task_id, url, existing_note in tasks_to_update:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L631 | `manager.update_task_note(task_id, note)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L646 | `manager.update_task_name(task_id, title)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L681 | `task_id = None` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L684 | `task_id = task['id']` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L687 | `if task_id:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L691 | `manager.update_task_name(task_id, new_name)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L223 | `task_id = "ABC123"` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L226 | `result = manager.complete_task(task_id)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L232 | `assert f'id: "{task_id}"' in js_call` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L240 | `manager.complete_task(task_id)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L246 | `task_id = "ABC123"` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L250 | `result = manager.append_task_note(task_id, note_text)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L256 | `assert f'id: "{task_id}"' in js_call` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L264 | `manager.append_task_note(task_id, note_with_quotes)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L273 | `manager.append_task_note(task_id, note_text)` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L168 | `def complete_task(self, task_id: str) -> str:` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L176 | `const tasks = doc.flattenedTasks.whose({{id: "{task_id}"}})();` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L201 | `task_id = None` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L204 | `task_id = task['id']` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L207 | `if not task_id:` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L212 | `result = manager.complete_task(task_id)` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L217 | `still_exists = any(task['id'] == task_id for task in tasks_after)` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L249 | `+     def complete_task(self, task_id: str) -> str:` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L253 | `+             task_id: The ID of the task to complete` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L264 | `+                 const tasks = doc.flattenedTasks.whose({{id: "{task_id}"}})();` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L302 | `-             const tasks = doc.flattenedTasks.whose({{id: "{task_id}"}})();` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L314 | `+         result = manager.complete_task(task_id)` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L171 | `def update_task_name(self, task_id: str, new_name: str) -> None:` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L179 | `const task = doc.flattenedTasks.whose({{id: "{task_id}"}})()[0];` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L188 | `def update_task_note(self, task_id: str, note: str) -> None:` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L196 | `const task = doc.flattenedTasks.whose({{id: "{task_id}"}})()[0];` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L205 | `def append_task_note(self, task_id: str, note_text: str) -> None:` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L209 | `task_id: The ID of the task to update` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L218 | `const task = doc.flattenedTasks.whose({{id: "{task_id}"}})()[0];` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L282 | `def complete_task(self, task_id: str) -> str:` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L286 | `task_id: The ID of the task to complete` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L300 | `const task = doc.flattenedTasks.whose({{id: "{task_id}"}})()[0];` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L625 | `for task_id, url, existing_note in tasks_to_update:` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L631 | `manager.update_task_note(task_id, note)` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L646 | `manager.update_task_name(task_id, title)` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L681 | `task_id = None` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L684 | `task_id = task['id']` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L687 | `if task_id:` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L691 | `manager.update_task_name(task_id, new_name)` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L223 | `task_id = "ABC123"` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L226 | `result = manager.complete_task(task_id)` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L232 | `assert f'id: "{task_id}"' in js_call` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L240 | `manager.complete_task(task_id)` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L246 | `task_id = "ABC123"` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L250 | `result = manager.append_task_note(task_id, note_text)` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L256 | `assert f'id: "{task_id}"' in js_call` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L264 | `manager.append_task_note(task_id, note_with_quotes)` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L273 | `manager.append_task_note(task_id, note_text)` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L104 | `+     def update_task_note(self, task_id: str, note: str) -> None:` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L112 | `+                 const task = doc.flattenedTasks.whose({{id: "{task_id}"}})()[0];` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L135 | `-     for task_id, url in tasks_to_update:` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L136 | `+     for task_id, url, existing_note in tasks_to_update:` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L140 | `manager.update_task_name(task_id, title)` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L145 | `+                 manager.update_task_note(task_id, note)` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L187 | `for task_id, url, existing_note in tasks_to_update:` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L193 | `+                 manager.update_task_note(task_id, note)` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L200 | `manager.update_task_name(task_id, title)` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L205 | `-                 manager.update_task_note(task_id, note)` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L171 | `def update_task_name(self, task_id: str, new_name: str) -> None:` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L179 | `const task = doc.flattenedTasks.whose({{id: "{task_id}"}})()[0];` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L188 | `def update_task_note(self, task_id: str, note: str) -> None:` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L196 | `const task = doc.flattenedTasks.whose({{id: "{task_id}"}})()[0];` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L205 | `def append_task_note(self, task_id: str, note_text: str) -> None:` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L209 | `task_id: The ID of the task to update` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L218 | `const task = doc.flattenedTasks.whose({{id: "{task_id}"}})()[0];` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L282 | `def complete_task(self, task_id: str) -> str:` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L286 | `task_id: The ID of the task to complete` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L300 | `const task = doc.flattenedTasks.whose({{id: "{task_id}"}})()[0];` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L625 | `for task_id, url, existing_note in tasks_to_update:` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L631 | `manager.update_task_note(task_id, note)` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L646 | `manager.update_task_name(task_id, title)` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L681 | `task_id = None` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L684 | `task_id = task['id']` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L687 | `if task_id:` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L691 | `manager.update_task_name(task_id, new_name)` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L223 | `task_id = "ABC123"` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L226 | `result = manager.complete_task(task_id)` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L232 | `assert f'id: "{task_id}"' in js_call` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L240 | `manager.complete_task(task_id)` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L246 | `task_id = "ABC123"` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L250 | `result = manager.append_task_note(task_id, note_text)` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L256 | `assert f'id: "{task_id}"' in js_call` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L264 | `manager.append_task_note(task_id, note_with_quotes)` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L273 | `manager.append_task_note(task_id, note_text)` |
 
 </details>
 
@@ -1303,11 +1303,11 @@ _****_
         
 | File | Line | Match |
 |------|------|-------|
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L192 | `def test_complete():` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L840 | `def test_complete():` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L220 | `def test_complete_task(manager, mock_system):` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L840 | `def test_complete():` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L220 | `def test_complete_task(manager, mock_system):` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L192 | `def test_complete():` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L840 | `def test_complete():` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L220 | `def test_complete_task(manager, mock_system):` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L840 | `def test_complete():` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L220 | `def test_complete_task(manager, mock_system):` |
 
 </details>
 
@@ -1619,7 +1619,7 @@ Let's run the tests to make sure everything works:
 _****_
 
 ```bash
-cd /Users/idvorkin/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py::test_update_task tests/unit/test_omnifocus.py::test_update_note tests/unit/test_omnifocus.py::test_complete -v
+cd $HOME/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py::test_update_task tests/unit/test_omnifocus.py::test_update_note tests/unit/test_omnifocus.py::test_complete -v
 ```
 
 ```
@@ -1627,10 +1627,10 @@ cd /Users/idvorkin/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifo
 igors-Mac-mini in omnifocus_cli on  main [$!] via 🐍 v3.13.0 (omnifocus_cli) on ☁️   took 2s 
 <_note tests/unit/test_omnifocus.py::test_complete -v
 =========================================== test session starts ============================================
-platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- /Users/idvorkin/gits/omnifocus_cli/.venv/bin
+platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- $HOME/gits/omnifocus_cli/.venv/bin
 /python
 cachedir: .pytest_cache
-rootdir: /Users/idvorkin/gits/omnifocus_cli
+rootdir: $HOME/gits/omnifocus_cli
 configfile: pyproject.toml
 collected 3 items                                                                                          
 
@@ -1822,26 +1822,26 @@ _****_
         
 | File | Line | Match |
 |------|------|-------|
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L157 | `- Line 171: In `update_task_name` method` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L493 | `mock_manager.update_task_name.assert_has_calls([` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L539 | `mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L589 | `mock_manager.update_task_name.assert_has_calls([` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L624 | `mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L662 | `mock_manager.update_task_name.assert_called_once_with("task1", "Example Org")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L696 | `mock_manager.update_task_name.assert_not_called()` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L281 | `mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L331 | `+     mock_manager.update_task_name.assert_has_calls([` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L140 | `manager.update_task_name(task_id, title)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L200 | `manager.update_task_name(task_id, title)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L353 | `+     mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L391 | `+     mock_manager.update_task_name.assert_called_once_with("task1", "Example Org")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L425 | `+     mock_manager.update_task_name.assert_not_called()` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L493 | `mock_manager.update_task_name.assert_has_calls([` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L539 | `mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L589 | `mock_manager.update_task_name.assert_has_calls([` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L624 | `mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L662 | `mock_manager.update_task_name.assert_called_once_with("task1", "Example Org")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L696 | `mock_manager.update_task_name.assert_not_called()` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L157 | `- Line 171: In `update_task_name` method` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L493 | `mock_manager.update_task_name.assert_has_calls([` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L539 | `mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L589 | `mock_manager.update_task_name.assert_has_calls([` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L624 | `mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L662 | `mock_manager.update_task_name.assert_called_once_with("task1", "Example Org")` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L696 | `mock_manager.update_task_name.assert_not_called()` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L281 | `mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L331 | `+     mock_manager.update_task_name.assert_has_calls([` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L140 | `manager.update_task_name(task_id, title)` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L200 | `manager.update_task_name(task_id, title)` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L353 | `+     mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L391 | `+     mock_manager.update_task_name.assert_called_once_with("task1", "Example Org")` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L425 | `+     mock_manager.update_task_name.assert_not_called()` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L493 | `mock_manager.update_task_name.assert_has_calls([` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L539 | `mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L589 | `mock_manager.update_task_name.assert_has_calls([` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L624 | `mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L662 | `mock_manager.update_task_name.assert_called_once_with("task1", "Example Org")` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L696 | `mock_manager.update_task_name.assert_not_called()` |
 
 </details>
 
@@ -1973,57 +1973,57 @@ _****_
         
 | File | Line | Match |
 |------|------|-------|
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L156 | `- Line 149: In `get_incomplete_tasks` method` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L168 | `def complete_task(self, task_id: str) -> str:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L200 | `tasks = manager.get_incomplete_tasks()` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L212 | `result = manager.complete_task(task_id)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L216 | `tasks_after = manager.get_incomplete_tasks()` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L249 | `+     def complete_task(self, task_id: str) -> str:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L286 | `Now I'll update the `test_complete` function to use the new `complete_task` method.` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L314 | `+         result = manager.complete_task(task_id)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L327 | `1. Added a new `complete_task` method to the `OmniFocusManager` class that encapsulates the JavaScript logic for completing a task.` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L240 | `manager.complete_task(task_id)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L451 | `mock_manager.get_incomplete_tasks.return_value = [` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L504 | `mock_manager.get_incomplete_tasks.return_value = [` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L547 | `mock_manager.get_incomplete_tasks.return_value = [` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L600 | `mock_manager.get_incomplete_tasks.return_value = [` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L638 | `mock_manager.get_incomplete_tasks.return_value = [` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L676 | `mock_manager.get_incomplete_tasks.return_value = [` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L160 | `tasks_data = manager.get_incomplete_tasks()` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L289 | `+     mock_manager.get_incomplete_tasks.return_value = [` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L57 | `Let me implement the changes to properly follow the humble object pattern. I'll first add the `complete_task` method to the `OmniFocusManager` class and then update the `test_complete` function to use it.` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L329 | `+     mock_manager.get_incomplete_tasks.return_value = [` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L367 | `+     mock_manager.get_incomplete_tasks.return_value = [` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L405 | `+     mock_manager.get_incomplete_tasks.return_value = [` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L546 | `tests/unit/test_omnifocus.py::test_complete_task PASSED                                                                            [ 44%]` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L568 | `mock_manager.get_incomplete_tasks.return_value = [` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L654 | `tests/unit/test_omnifocus.py::test_complete_task PASSED                                                                            [ 44%]` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L676 | `mock_manager.get_incomplete_tasks.return_value = [` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L149 | `def get_incomplete_tasks(self) -> List[dict]:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L743 | `tasks = manager.get_incomplete_tasks()` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L761 | `updated_tasks = manager.get_incomplete_tasks()` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L791 | `updated_tasks = manager.get_incomplete_tasks()` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L921 | `all_incomplete_tasks = manager.get_all_tasks()` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L929 | `# Find the task with the same name in all_incomplete_tasks to ensure we have the ID` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L930 | `task_to_complete = next((task for task in all_incomplete_tasks if task.name == selected_task.name), None)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/testing-recent-changes-in-code.md` | L1207 | `-         tasks = manager.get_incomplete_tasks()` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/testing-recent-changes-in-code.md` | L1211 | `+         incomplete_tasks = manager.get_incomplete_tasks()` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/testing-recent-changes-in-code.md` | L1219 | `+             task_to_complete = next((task for task in incomplete_tasks if task["name"] == selected_task_name), None)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/testing-recent-changes-in-code.md` | L1230 | `result = manager.complete_task(task_to_complete["id"])` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L149 | `def get_incomplete_tasks(self) -> List[dict]:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L743 | `tasks = manager.get_incomplete_tasks()` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L761 | `updated_tasks = manager.get_incomplete_tasks()` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L791 | `updated_tasks = manager.get_incomplete_tasks()` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L921 | `all_incomplete_tasks = manager.get_all_tasks()` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L929 | `# Find the task with the same name in all_incomplete_tasks to ensure we have the ID` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L930 | `task_to_complete = next((task for task in all_incomplete_tasks if task.name == selected_task.name), None)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L240 | `manager.complete_task(task_id)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L451 | `mock_manager.get_incomplete_tasks.return_value = [` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L504 | `mock_manager.get_incomplete_tasks.return_value = [` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L547 | `mock_manager.get_incomplete_tasks.return_value = [` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L600 | `mock_manager.get_incomplete_tasks.return_value = [` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L638 | `mock_manager.get_incomplete_tasks.return_value = [` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L676 | `mock_manager.get_incomplete_tasks.return_value = [` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L156 | `- Line 149: In `get_incomplete_tasks` method` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L168 | `def complete_task(self, task_id: str) -> str:` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L200 | `tasks = manager.get_incomplete_tasks()` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L212 | `result = manager.complete_task(task_id)` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L216 | `tasks_after = manager.get_incomplete_tasks()` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L249 | `+     def complete_task(self, task_id: str) -> str:` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L286 | `Now I'll update the `test_complete` function to use the new `complete_task` method.` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L314 | `+         result = manager.complete_task(task_id)` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L327 | `1. Added a new `complete_task` method to the `OmniFocusManager` class that encapsulates the JavaScript logic for completing a task.` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L240 | `manager.complete_task(task_id)` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L451 | `mock_manager.get_incomplete_tasks.return_value = [` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L504 | `mock_manager.get_incomplete_tasks.return_value = [` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L547 | `mock_manager.get_incomplete_tasks.return_value = [` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L600 | `mock_manager.get_incomplete_tasks.return_value = [` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L638 | `mock_manager.get_incomplete_tasks.return_value = [` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L676 | `mock_manager.get_incomplete_tasks.return_value = [` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L160 | `tasks_data = manager.get_incomplete_tasks()` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L289 | `+     mock_manager.get_incomplete_tasks.return_value = [` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L57 | `Let me implement the changes to properly follow the humble object pattern. I'll first add the `complete_task` method to the `OmniFocusManager` class and then update the `test_complete` function to use it.` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L329 | `+     mock_manager.get_incomplete_tasks.return_value = [` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L367 | `+     mock_manager.get_incomplete_tasks.return_value = [` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L405 | `+     mock_manager.get_incomplete_tasks.return_value = [` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L546 | `tests/unit/test_omnifocus.py::test_complete_task PASSED                                                                            [ 44%]` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L568 | `mock_manager.get_incomplete_tasks.return_value = [` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L654 | `tests/unit/test_omnifocus.py::test_complete_task PASSED                                                                            [ 44%]` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L676 | `mock_manager.get_incomplete_tasks.return_value = [` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L149 | `def get_incomplete_tasks(self) -> List[dict]:` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L743 | `tasks = manager.get_incomplete_tasks()` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L761 | `updated_tasks = manager.get_incomplete_tasks()` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L791 | `updated_tasks = manager.get_incomplete_tasks()` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L921 | `all_incomplete_tasks = manager.get_all_tasks()` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L929 | `# Find the task with the same name in all_incomplete_tasks to ensure we have the ID` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L930 | `task_to_complete = next((task for task in all_incomplete_tasks if task.name == selected_task.name), None)` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/testing-recent-changes-in-code.md` | L1207 | `-         tasks = manager.get_incomplete_tasks()` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/testing-recent-changes-in-code.md` | L1211 | `+         incomplete_tasks = manager.get_incomplete_tasks()` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/testing-recent-changes-in-code.md` | L1219 | `+             task_to_complete = next((task for task in incomplete_tasks if task["name"] == selected_task_name), None)` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/testing-recent-changes-in-code.md` | L1230 | `result = manager.complete_task(task_to_complete["id"])` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L149 | `def get_incomplete_tasks(self) -> List[dict]:` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L743 | `tasks = manager.get_incomplete_tasks()` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L761 | `updated_tasks = manager.get_incomplete_tasks()` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L791 | `updated_tasks = manager.get_incomplete_tasks()` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L921 | `all_incomplete_tasks = manager.get_all_tasks()` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L929 | `# Find the task with the same name in all_incomplete_tasks to ensure we have the ID` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L930 | `task_to_complete = next((task for task in all_incomplete_tasks if task.name == selected_task.name), None)` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L240 | `manager.complete_task(task_id)` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L451 | `mock_manager.get_incomplete_tasks.return_value = [` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L504 | `mock_manager.get_incomplete_tasks.return_value = [` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L547 | `mock_manager.get_incomplete_tasks.return_value = [` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L600 | `mock_manager.get_incomplete_tasks.return_value = [` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L638 | `mock_manager.get_incomplete_tasks.return_value = [` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L676 | `mock_manager.get_incomplete_tasks.return_value = [` |
 
 </details>
 
@@ -2060,13 +2060,13 @@ _****_
         
 | File | Line | Match |
 |------|------|-------|
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L192 | `def test_complete():` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L841 | `def test_complete():` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L220 | `def test_complete_by_id(manager, mock_system):` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L756 | `def test_complete(manager, mock_system):` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L841 | `def test_complete():` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L220 | `def test_complete_by_id(manager, mock_system):` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L756 | `def test_complete(manager, mock_system):` |
+| `file://$HOME/gits/omnifocus_cli/cursor_logs/javascript-commands-in-omnifocus-structure.md` | L192 | `def test_complete():` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L841 | `def test_complete():` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L220 | `def test_complete_by_id(manager, mock_system):` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L756 | `def test_complete(manager, mock_system):` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L841 | `def test_complete():` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L220 | `def test_complete_by_id(manager, mock_system):` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L756 | `def test_complete(manager, mock_system):` |
 
 </details>
 
@@ -2162,16 +2162,16 @@ _****_
         
 | File | Line | Match |
 |------|------|-------|
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L742 | `def test_append():` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L777 | `def test_append_pydantic():` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L243 | `def test_append_note(manager, mock_system):` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L276 | `def test_append_to_task(manager, mock_system):` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L305 | `def test_append_to_task_with_pydantic(manager, mock_system):` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L742 | `def test_append():` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L777 | `def test_append_pydantic():` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L243 | `def test_append_note(manager, mock_system):` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L276 | `def test_append_to_task(manager, mock_system):` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L305 | `def test_append_to_task_with_pydantic(manager, mock_system):` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L742 | `def test_append():` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L777 | `def test_append_pydantic():` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L243 | `def test_append_note(manager, mock_system):` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L276 | `def test_append_to_task(manager, mock_system):` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L305 | `def test_append_to_task_with_pydantic(manager, mock_system):` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L742 | `def test_append():` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L777 | `def test_append_pydantic():` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L243 | `def test_append_note(manager, mock_system):` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L276 | `def test_append_to_task(manager, mock_system):` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L305 | `def test_append_to_task_with_pydantic(manager, mock_system):` |
 
 </details>
 
@@ -2232,16 +2232,16 @@ Let's run the tests to make sure all our changes work correctly:
 _****_
 
 ```bash
-cd /Users/idvorkin/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py -v
+cd $HOME/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py -v
 ```
 
 ```
-❯ cd /Users/idvorkin/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py -v
+❯ cd $HOME/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py -v
 =========================================== test session starts ============================================
-platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- /Users/idvorkin/gits/omnifocus_cli/.venv/bin
+platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- $HOME/gits/omnifocus_cli/.venv/bin
 /python
 cachedir: .pytest_cache
-rootdir: /Users/idvorkin/gits/omnifocus_cli
+rootdir: $HOME/gits/omnifocus_cli
 configfile: pyproject.toml
 collected 24 items                                                                                         
 
@@ -2830,23 +2830,23 @@ _****_
         
 | File | Line | Match |
 |------|------|-------|
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L493 | `mock_manager.update_task_name.assert_has_calls([` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L539 | `mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L589 | `mock_manager.update_task_name.assert_has_calls([` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L624 | `mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L662 | `mock_manager.update_task_name.assert_called_once_with("task1", "Example Org")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L696 | `mock_manager.update_task_name.assert_not_called()` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L281 | `mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L331 | `+     mock_manager.update_task_name.assert_has_calls([` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L353 | `+     mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L391 | `+     mock_manager.update_task_name.assert_called_once_with("task1", "Example Org")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L425 | `+     mock_manager.update_task_name.assert_not_called()` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L493 | `mock_manager.update_task_name.assert_has_calls([` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L539 | `mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L589 | `mock_manager.update_task_name.assert_has_calls([` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L624 | `mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L662 | `mock_manager.update_task_name.assert_called_once_with("task1", "Example Org")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L696 | `mock_manager.update_task_name.assert_not_called()` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L493 | `mock_manager.update_task_name.assert_has_calls([` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L539 | `mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L589 | `mock_manager.update_task_name.assert_has_calls([` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L624 | `mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L662 | `mock_manager.update_task_name.assert_called_once_with("task1", "Example Org")` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L696 | `mock_manager.update_task_name.assert_not_called()` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L281 | `mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/rules-for-fixup-url-function.md` | L331 | `+     mock_manager.update_task_name.assert_has_calls([` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L353 | `+     mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L391 | `+     mock_manager.update_task_name.assert_called_once_with("task1", "Example Org")` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L425 | `+     mock_manager.update_task_name.assert_not_called()` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L493 | `mock_manager.update_task_name.assert_has_calls([` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L539 | `mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L589 | `mock_manager.update_task_name.assert_has_calls([` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L624 | `mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L662 | `mock_manager.update_task_name.assert_called_once_with("task1", "Example Org")` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L696 | `mock_manager.update_task_name.assert_not_called()` |
 
 </details>
 
@@ -2962,36 +2962,36 @@ _****_
         
 | File | Line | Match |
 |------|------|-------|
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L206 | `def update_task_note(self, task_id: str, note: str) -> None:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L233 | `self.update_task_note(task.id, note)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L615 | `mock_manager.update_task_note.assert_called_once_with("task1", "Source: https://example.com")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L653 | `mock_manager.update_task_note.assert_not_called()` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L676 | `# Mock update_task_note to fail with a proper Exception` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L677 | `mock_manager.update_task_note.side_effect = RuntimeError("Failed to update note")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L104 | `+     def update_task_note(self, task_id: str, note: str) -> None:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L145 | `+                 manager.update_task_note(task_id, note)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L159 | `1. Added a new `update_task_note` method to the `OmniFocusManager` class to handle updating task notes, following the humble object pattern.` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L166 | `- Use the new `update_task_note` method to update the task's note` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L193 | `+                 manager.update_task_note(task_id, note)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L205 | `-                 manager.update_task_note(task_id, note)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L352 | `+     mock_manager.update_task_note.assert_called_once_with("task1", "Source: https://example.com")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L390 | `+     mock_manager.update_task_note.assert_not_called()` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L413 | `+     # Mock update_task_note to fail` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L414 | `+     mock_manager.update_task_note.side_effect = Exception("Failed to update note")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L576 | `# Mock update_task_note to fail` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L577 | `mock_manager.update_task_note.side_effect = Exception("Failed to update note")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L613 | `-     # Mock update_task_note to fail` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L614 | `-     mock_manager.update_task_note.side_effect = Exception("Failed to update note")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L615 | `+     # Mock update_task_note to fail with a proper Exception` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L616 | `+     mock_manager.update_task_note.side_effect = RuntimeError("Failed to update note")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L684 | `# Mock update_task_note to fail with a proper Exception` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L685 | `mock_manager.update_task_note.side_effect = RuntimeError("Failed to update note")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L206 | `def update_task_note(self, task_id: str, note: str) -> None:` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/omnifocus.py` | L233 | `self.update_task_note(task.id, note)` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L615 | `mock_manager.update_task_note.assert_called_once_with("task1", "Source: https://example.com")` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L653 | `mock_manager.update_task_note.assert_not_called()` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L676 | `# Mock update_task_note to fail with a proper Exception` |
-| `file:///Users/idvorkin/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L677 | `mock_manager.update_task_note.side_effect = RuntimeError("Failed to update note")` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L206 | `def update_task_note(self, task_id: str, note: str) -> None:` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L233 | `self.update_task_note(task.id, note)` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L615 | `mock_manager.update_task_note.assert_called_once_with("task1", "Source: https://example.com")` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L653 | `mock_manager.update_task_note.assert_not_called()` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L676 | `# Mock update_task_note to fail with a proper Exception` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L677 | `mock_manager.update_task_note.side_effect = RuntimeError("Failed to update note")` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L104 | `+     def update_task_note(self, task_id: str, note: str) -> None:` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L145 | `+                 manager.update_task_note(task_id, note)` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L159 | `1. Added a new `update_task_note` method to the `OmniFocusManager` class to handle updating task notes, following the humble object pattern.` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L166 | `- Use the new `update_task_note` method to update the task's note` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L193 | `+                 manager.update_task_note(task_id, note)` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L205 | `-                 manager.update_task_note(task_id, note)` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L352 | `+     mock_manager.update_task_note.assert_called_once_with("task1", "Source: https://example.com")` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L390 | `+     mock_manager.update_task_note.assert_not_called()` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L413 | `+     # Mock update_task_note to fail` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L414 | `+     mock_manager.update_task_note.side_effect = Exception("Failed to update note")` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L576 | `# Mock update_task_note to fail` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L577 | `mock_manager.update_task_note.side_effect = Exception("Failed to update note")` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L613 | `-     # Mock update_task_note to fail` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L614 | `-     mock_manager.update_task_note.side_effect = Exception("Failed to update note")` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L615 | `+     # Mock update_task_note to fail with a proper Exception` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L616 | `+     mock_manager.update_task_note.side_effect = RuntimeError("Failed to update note")` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L684 | `# Mock update_task_note to fail with a proper Exception` |
+| `file://$HOME/gits/omnifocus_cli/cursor-logs/updating-url-handling-in-omnifocus.md` | L685 | `mock_manager.update_task_note.side_effect = RuntimeError("Failed to update note")` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L206 | `def update_task_note(self, task_id: str, note: str) -> None:` |
+| `file://$HOME/gits/omnifocus_cli/omnifocus.py` | L233 | `self.update_task_note(task.id, note)` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L615 | `mock_manager.update_task_note.assert_called_once_with("task1", "Source: https://example.com")` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L653 | `mock_manager.update_task_note.assert_not_called()` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L676 | `# Mock update_task_note to fail with a proper Exception` |
+| `file://$HOME/gits/omnifocus_cli/tests/unit/test_omnifocus.py` | L677 | `mock_manager.update_task_note.side_effect = RuntimeError("Failed to update note")` |
 
 </details>
 
@@ -3036,18 +3036,18 @@ Let's run the tests again to see what's still failing:
 _****_
 
 ```bash
-cd /Users/idvorkin/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py::test_append_to_task -v
+cd $HOME/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py::test_append_to_task -v
 ```
 
 ```
-❯ cd /Users/idvorkin/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py::test_append_to_tas
-k cd /Users/idvorkin/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py::test_append_to_tas
+❯ cd $HOME/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py::test_append_to_tas
+k cd $HOME/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py::test_append_to_tas
 k -v
 =========================================== test session starts ============================================
-platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- /Users/idvorkin/gits/omnifocus_cli/.venv/bin
+platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- $HOME/gits/omnifocus_cli/.venv/bin
 /python
 cachedir: .pytest_cache
-rootdir: /Users/idvorkin/gits/omnifocus_cli
+rootdir: $HOME/gits/omnifocus_cli
 configfile: pyproject.toml
 collected 1 item                                                                                           
 
@@ -3200,18 +3200,18 @@ Let's run the tests again:
 _****_
 
 ```bash
-cd /Users/idvorkin/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py::test_append_to_task -v
+cd $HOME/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py::test_append_to_task -v
 ```
 
 ```
-❯ cd /Users/idvorkin/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py::test_append_to_tas
-k cd /Users/idvorkin/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py::test_append_to_tas
+❯ cd $HOME/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py::test_append_to_tas
+k cd $HOME/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py::test_append_to_tas
 k -v
 =========================================== test session starts ============================================
-platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- /Users/idvorkin/gits/omnifocus_cli/.venv/bin
+platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- $HOME/gits/omnifocus_cli/.venv/bin
 /python
 cachedir: .pytest_cache
-rootdir: /Users/idvorkin/gits/omnifocus_cli
+rootdir: $HOME/gits/omnifocus_cli
 configfile: pyproject.toml
 collected 1 item                                                                                           
 
@@ -3234,16 +3234,16 @@ Great! Let's run all the tests:
 _****_
 
 ```bash
-cd /Users/idvorkin/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py -v
+cd $HOME/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py -v
 ```
 
 ```
-❯ cd /Users/idvorkin/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py -v
+❯ cd $HOME/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py -v
 =========================================== test session starts ============================================
-platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- /Users/idvorkin/gits/omnifocus_cli/.venv/bin
+platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- $HOME/gits/omnifocus_cli/.venv/bin
 /python
 cachedir: .pytest_cache
-rootdir: /Users/idvorkin/gits/omnifocus_cli
+rootdir: $HOME/gits/omnifocus_cli
 configfile: pyproject.toml
 collected 24 items                                                                                         
 

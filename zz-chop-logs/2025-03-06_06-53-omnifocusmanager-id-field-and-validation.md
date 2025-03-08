@@ -674,10 +674,10 @@ just test
 ```
 pytest tests/ -v
 =========================================== test session starts ============================================
-platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- /Users/idvorkin/gits/omnifocus_cli/.venv/bin
+platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- $HOME/gits/omnifocus_cli/.venv/bin
 /python3
 cachedir: .pytest_cache
-rootdir: /Users/idvorkin/gits/omnifocus_cli
+rootdir: $HOME/gits/omnifocus_cli
 configfile: pyproject.toml
 collected 24 items                                                                                         
 

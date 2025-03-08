@@ -600,7 +600,7 @@ Appending to task 'TEST-9e3a3ef4' note: 'Appended at 2025-03-06 06:25:12'
 Result: Note appended successfully
 
 ╭─────────────────────────────────── Traceback (most recent call last) ────────────────────────────────────╮
-│ /Users/idvorkin/gits/omnifocus_cli/omnifocus.py:827 in test_append_pydantic                              │
+│ $HOME/gits/omnifocus_cli/omnifocus.py:827 in test_append_pydantic                              │
 │                                                                                                          │
 │    824 │   │   updated_tasks = manager.get_incomplete_tasks()                                            │
 │    825 │   │   updated_task = next((task for task in updated_tasks if task.name == test_name),           │
@@ -836,7 +836,7 @@ Result: Note appended successfully
 │ │                 ]                                                                                    │ │
 │ ╰──────────────────────────────────────────────────────────────────────────────────────────────────────╯ │
 │                                                                                                          │
-│ /Users/idvorkin/gits/omnifocus_cli/.venv/lib/python3.12/site-packages/pydantic/main.py:891 in            │
+│ $HOME/gits/omnifocus_cli/.venv/lib/python3.12/site-packages/pydantic/main.py:891 in            │
 │ __getattr__                                                                                              │
 │                                                                                                          │
 │    888 │   │   │   │   │   │   return super().__getattribute__(item)  # Raises AttributeError i          │
@@ -1136,10 +1136,10 @@ pytest
 ```
 ❯ pytest
 =========================================== test session starts ============================================
-platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- /Users/idvorkin/gits/omnifocus_cli/.venv/bin
+platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- $HOME/gits/omnifocus_cli/.venv/bin
 /python3
 cachedir: .pytest_cache
-rootdir: /Users/idvorkin/gits/omnifocus_cli
+rootdir: $HOME/gits/omnifocus_cli
 configfile: pyproject.toml
 testpaths: tests
 collected 24 items                                                                                         
@@ -1737,10 +1737,10 @@ pytest
 ```
 ❯ pytest
 =========================================== test session starts ============================================
-platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- /Users/idvorkin/gits/omnifocus_cli/.venv/bin
+platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- $HOME/gits/omnifocus_cli/.venv/bin
 /python3
 cachedir: .pytest_cache
-rootdir: /Users/idvorkin/gits/omnifocus_cli
+rootdir: $HOME/gits/omnifocus_cli
 configfile: pyproject.toml
 testpaths: tests
 collected 24 items                                                                                         
@@ -2027,10 +2027,10 @@ pytest
 
 ```
 =========================================== test session starts ============================================
-platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- /Users/idvorkin/gits/omnifocus_cli/.venv/bin
+platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- $HOME/gits/omnifocus_cli/.venv/bin
 /python3
 cachedir: .pytest_cache
-rootdir: /Users/idvorkin/gits/omnifocus_cli
+rootdir: $HOME/gits/omnifocus_cli
 configfile: pyproject.toml
 testpaths: tests
 collected 24 items                                                                                         
@@ -2382,10 +2382,10 @@ pytest
 
 ```
 =========================================== test session starts ============================================
-platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- /Users/idvorkin/gits/omnifocus_cli/.venv/bin
+platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- $HOME/gits/omnifocus_cli/.venv/bin
 /python3
 cachedir: .pytest_cache
-rootdir: /Users/idvorkin/gits/omnifocus_cli
+rootdir: $HOME/gits/omnifocus_cli
 configfile: pyproject.toml
 testpaths: tests
 collected 24 items                                                                                         
@@ -2709,10 +2709,10 @@ pytest
 
 ```
 =========================================== test session starts ============================================
-platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- /Users/idvorkin/gits/omnifocus_cli/.venv/bin
+platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- $HOME/gits/omnifocus_cli/.venv/bin
 /python3
 cachedir: .pytest_cache
-rootdir: /Users/idvorkin/gits/omnifocus_cli
+rootdir: $HOME/gits/omnifocus_cli
 configfile: pyproject.toml
 testpaths: tests
 collected 24 items                                                                                         
@@ -3079,10 +3079,10 @@ pytest
 
 ```
 =========================================== test session starts ============================================
-platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- /Users/idvorkin/gits/omnifocus_cli/.venv/bin
+platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- $HOME/gits/omnifocus_cli/.venv/bin
 /python3
 cachedir: .pytest_cache
-rootdir: /Users/idvorkin/gits/omnifocus_cli
+rootdir: $HOME/gits/omnifocus_cli
 configfile: pyproject.toml
 testpaths: tests
 collected 24 items                                                                                         
@@ -3511,10 +3511,10 @@ pytest
 
 ```
 =========================================== test session starts ============================================
-platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- /Users/idvorkin/gits/omnifocus_cli/.venv/bin
+platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- $HOME/gits/omnifocus_cli/.venv/bin
 /python3
 cachedir: .pytest_cache
-rootdir: /Users/idvorkin/gits/omnifocus_cli
+rootdir: $HOME/gits/omnifocus_cli
 configfile: pyproject.toml
 testpaths: tests
 collected 24 items                                                                                         
@@ -3945,10 +3945,10 @@ pytest
 
 ```
 =========================================== test session starts ============================================
-platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- /Users/idvorkin/gits/omnifocus_cli/.venv/bin
+platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- $HOME/gits/omnifocus_cli/.venv/bin
 /python3
 cachedir: .pytest_cache
-rootdir: /Users/idvorkin/gits/omnifocus_cli
+rootdir: $HOME/gits/omnifocus_cli
 configfile: pyproject.toml
 testpaths: tests
 collected 24 items                                                                                         
@@ -4277,10 +4277,10 @@ pytest
 
 ```
 =========================================== test session starts ============================================
-platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- /Users/idvorkin/gits/omnifocus_cli/.venv/bin
+platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- $HOME/gits/omnifocus_cli/.venv/bin
 /python3
 cachedir: .pytest_cache
-rootdir: /Users/idvorkin/gits/omnifocus_cli
+rootdir: $HOME/gits/omnifocus_cli
 configfile: pyproject.toml
 testpaths: tests
 collected 24 items                                                                                         
@@ -4816,10 +4816,10 @@ pytest
 
 ```
 =========================================== test session starts ============================================
-platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- /Users/idvorkin/gits/omnifocus_cli/.venv/bin
+platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- $HOME/gits/omnifocus_cli/.venv/bin
 /python3
 cachedir: .pytest_cache
-rootdir: /Users/idvorkin/gits/omnifocus_cli
+rootdir: $HOME/gits/omnifocus_cli
 configfile: pyproject.toml
 testpaths: tests
 collected 24 items                                                                                         
@@ -5297,10 +5297,10 @@ pytest
 
 ```
 =========================================== test session starts ============================================
-platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- /Users/idvorkin/gits/omnifocus_cli/.venv/bin
+platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- $HOME/gits/omnifocus_cli/.venv/bin
 /python3
 cachedir: .pytest_cache
-rootdir: /Users/idvorkin/gits/omnifocus_cli
+rootdir: $HOME/gits/omnifocus_cli
 configfile: pyproject.toml
 testpaths: tests
 collected 24 items                                                                                         
@@ -5610,10 +5610,10 @@ pytest
 
 ```
 =========================================== test session starts ============================================
-platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- /Users/idvorkin/gits/omnifocus_cli/.venv/bin
+platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- $HOME/gits/omnifocus_cli/.venv/bin
 /python3
 cachedir: .pytest_cache
-rootdir: /Users/idvorkin/gits/omnifocus_cli
+rootdir: $HOME/gits/omnifocus_cli
 configfile: pyproject.toml
 testpaths: tests
 collected 24 items                                                                                         
