@@ -16,12 +16,86 @@ import requests
 from bs4 import BeautifulSoup
 import uuid
 import time
+from rich.console import Console
+from rich.theme import Theme
+from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
+from rich import box
+
+# Create a custom theme for consistent colors
+custom_theme = Theme({
+    "info": "cyan",
+    "warning": "yellow",
+    "danger": "bold red",
+    "success": "green",
+    "project": "blue",
+    "tag": "magenta",
+    "date": "yellow",
+    "flag": "bold red",
+    "header": "bold cyan",
+    "task": "white",
+})
+
+# Create a console with our custom theme
+console = Console(theme=custom_theme)
 
 app = typer.Typer(
     help="OmniFocus CLI - Manage OmniFocus from the command line",
     rich_markup_mode="rich",
     no_args_is_help=True,
 )
+
+# Add a custom callback for the help option
+@app.callback()
+def main(
+    ctx: typer.Context,
+    help: bool = typer.Option(
+        False, "--help", "-h", help="Show this help message and exit", is_eager=True
+    ),
+):
+    """OmniFocus CLI - Manage OmniFocus from the command line."""
+    if help:
+        # Create a rich help display
+        console.print(Panel.fit(
+            "[bold cyan]OmniFocus CLI[/bold cyan]\n\n"
+            "[white]A command-line interface for managing OmniFocus tasks.[/white]",
+            border_style="cyan",
+            title="About",
+            subtitle="v0.1.0"
+        ))
+        
+        # Display available commands
+        commands_table = Table(title="Available Commands", box=box.ROUNDED, border_style="cyan")
+        commands_table.add_column("Command", style="green")
+        commands_table.add_column("Description", style="white")
+        
+        # Add rows for each command
+        commands_table.add_row("list", "List all tasks")
+        commands_table.add_row("list-grouped-tasks", "List tasks grouped by project or tag")
+        commands_table.add_row("flagged", "Show all flagged tasks")
+        commands_table.add_row("add", "Create a new task")
+        commands_table.add_row("complete", "Mark a task as completed")
+        commands_table.add_row("flag", "Flag a task")
+        commands_table.add_row("unflag", "Unflag a task")
+        
+        console.print(commands_table)
+        
+        # Display usage examples
+        examples = Panel(
+            "[bold green]Examples:[/bold green]\n\n"
+            "[cyan]$ omnifocus add 'Buy groceries' --project 'Errands' --tag 'shopping'[/cyan]\n"
+            "[white]Creates a new task in the Errands project with the shopping tag[/white]\n\n"
+            "[cyan]$ omnifocus list-grouped-tasks --view by_project[/cyan]\n"
+            "[white]Lists all tasks grouped by their projects[/white]\n\n"
+            "[cyan]$ omnifocus flagged[/cyan]\n"
+            "[white]Shows all flagged tasks[/white]",
+            border_style="green",
+            title="Usage Examples"
+        )
+        console.print(examples)
+        
+        raise typer.Exit()
 
 
 class Task(BaseModel):
@@ -204,7 +278,7 @@ class OmniFocusManager:
                 const task = doc.flattenedTasks.whose({{id: "{task.id}"}})()[0];
 
                 if (task) {{
-                    task.name = "{new_name.replace('"', '\"')}";
+                    task.name = "{new_name.replace('"', "'")}";
                 }}
             }}
         """
@@ -238,7 +312,7 @@ class OmniFocusManager:
                 const task = doc.flattenedTasks.whose({{id: "{task.id}"}})()[0];
 
                 if (task) {{
-                    task.note = "{note.replace('"', '\"')}";
+                    task.note = "{note.replace('"', "'")}";
                 }}
             }}
         """
@@ -262,7 +336,7 @@ class OmniFocusManager:
                 if (task) {{
                     const currentNote = task.note();
                     const separator = currentNote && currentNote.length > 0 ? "\n\n" : "";
-                    task.note = currentNote + separator + "{note_text.replace('"', '\"')}";
+                    task.note = currentNote + separator + "{note_text.replace('"', "'")}";
                     return "Note appended successfully";
                 }} else {{
                     throw new Error("Task not found");
@@ -720,8 +794,7 @@ def list_grouped_tasks(
             sorted_groups.remove("today")
             sorted_groups.insert(0, "today")
 
-        print("\nTasks by Project:")
-        print("================")
+        console.print(Panel.fit("[header]Tasks by Project[/]", border_style="cyan"))
 
     else:  # by_tag
         # Group tasks by tag
@@ -736,25 +809,47 @@ def list_grouped_tasks(
                     groups[tag].append(task)
 
         sorted_groups = sorted(groups.keys())
-        print("\nTasks by Tag:")
-        print("============")
+        console.print(Panel.fit("[header]Tasks by Tag[/]", border_style="cyan"))
 
     for group in sorted_groups:
         if group not in groups or not groups[group]:
             continue
 
         task_count = len(groups[group])
-        print(f"\n{group} ({task_count}):")
+        console.print(f"\n[bold][project]{group}[/] [white]({task_count})[/][/bold]")
+        
         for task in groups[group]:
-            project = f" ({task.project})" if view == View.by_tag else ""
-            flag = "🚩 " if task.flagged else ""
-            tags = (
-                f" [{', '.join(task.tags)}]"
-                if view == View.by_project and task.tags
-                else ""
-            )
-            due = f" [Due: {task.due_date.date()}]" if task.due_date else ""
-            print(f"  • {flag}{task.name}{project}{tags}{due}")
+            # Build task display with rich formatting
+            task_text = Text()
+            
+            # Add flag emoji if flagged
+            if task.flagged:
+                task_text.append("🚩 ", style="flag")
+                
+            # Add task name
+            task_text.append(task.name, style="task")
+            
+            # Add project info if in tag view
+            if view == View.by_tag and task.project:
+                task_text.append(f" (", style="white")
+                task_text.append(f"{task.project}", style="project")
+                task_text.append(")", style="white")
+            
+            # Add tags if in project view
+            if view == View.by_project and task.tags:
+                tag_str = ", ".join(task.tags)
+                task_text.append(" [", style="white")
+                task_text.append(tag_str, style="tag")
+                task_text.append("]", style="white")
+            
+            # Add due date if present
+            if task.due_date:
+                task_text.append(" [Due: ", style="white")
+                task_text.append(f"{task.due_date.date()}", style="date")
+                task_text.append("]", style="white")
+            
+            console.print("  • ", end="")
+            console.print(task_text)
 
 
 @app.command(name="flagged")
@@ -762,16 +857,34 @@ def list_flagged():
     """Show all flagged tasks with their creation dates"""
     tasks = manager.get_flagged_tasks()
 
-    print("\nFlagged Tasks:")
-    print("=============")
+    console.print(Panel.fit("[header]Flagged Tasks[/]", border_style="red"))
+    
+    # Create a table for flagged tasks
+    table = Table(box=box.ROUNDED, border_style="red", expand=True)
+    table.add_column("Task", style="task")
+    table.add_column("Project", style="project")
+    table.add_column("Tags", style="tag")
+    table.add_column("Due Date", style="date")
+    table.add_column("Created", style="date")
+    
     for task in tasks:
-        project = f" ({task.project})"
-        tags = f" [{', '.join(task.tags)}]" if task.tags else ""
-        due = f" [Due: {task.due_date.date()}]" if task.due_date else ""
-        created = (
-            f" [Created: {task.creation_date.date()}]" if task.creation_date else ""
+        # Format tags as comma-separated list
+        tags_str = ", ".join(task.tags) if task.tags else ""
+        
+        # Format dates
+        due_date = task.due_date.date() if task.due_date else ""
+        created_date = task.creation_date.date() if task.creation_date else ""
+        
+        # Add row to table
+        table.add_row(
+            f"🚩 {task.name}",
+            task.project,
+            tags_str,
+            str(due_date),
+            str(created_date)
         )
-        print(f"• {task.name}{project}{tags}{due}{created}")
+    
+    console.print(table)
 
 
 @app.command()
@@ -798,48 +911,49 @@ def add(
             tag_list.append("url")
 
             # Fetch the webpage
-            response = requests.get(task, headers={"User-Agent": "Mozilla/5.0"})
+            response = requests.get(task, timeout=10)
             response.raise_for_status()
 
             # Parse the HTML and extract the title
             soup = BeautifulSoup(response.text, "html.parser")
             title = soup.title.string.strip() if soup.title else task
 
-            # Create the task with the URL as a note
-            params = {
-                "name": title,
-                "note": f"Source: {task}",
-                "autosave": "true",
-                "flag": "true",
-                "project": project,
-                "tags": ",".join(tag_list),
-            }
+            # Create the task with the title and URL in the note
+            new_task = Task(name=title, project=project, tags=tag_list, note=task)
+            manager.create_task(new_task)
 
-        except requests.exceptions.RequestException as e:
-            print(f"Error fetching URL: {e}")
-            return
+            # Show success message with rich formatting
+            console.print(Panel.fit(
+                f"[success]✓ Created task from URL:[/]\n"
+                f"[task]{title}[/]\n"
+                f"[info]Project:[/] [project]{project}[/]\n"
+                f"[info]Tags:[/] [tag]{', '.join(tag_list)}[/]\n"
+                f"[info]URL:[/] {task}",
+                title="Task Created",
+                border_style="green"
+            ))
         except Exception as e:
-            print(f"Error processing URL: {e}")
-            return
+            # Show error message with rich formatting
+            console.print(f"[danger]Error creating task from URL: {e}[/]")
+            # Fallback to creating a regular task with the URL as the name
+            new_task = Task(name=task, project=project, tags=tag_list)
+            manager.create_task(new_task)
+            console.print(f"[warning]Created task with URL as name instead.[/]")
     else:
-        # Regular task
-        if len(task) < 3:
-            print("Task text too short (minimum 3 characters)")
-            return
-
-        params = {
-            "name": task,
-            "autosave": "true",
-            "flag": "true",
-            "project": project,
-            "tags": ",".join(tag_list),
-        }
-
-    omnifocus_url = "omnifocus:///add?" + urllib.parse.urlencode(
-        params, quote_via=urllib.parse.quote
-    )
-    ic("Creating task", task)
-    system.open_url(omnifocus_url)
+        # Create a regular task
+        new_task = Task(name=task, project=project, tags=tag_list)
+        manager.create_task(new_task)
+        
+        # Show success message with rich formatting
+        tag_display = f"[tag]{', '.join(tag_list)}[/]" if tag_list else "[dim]None[/]"
+        console.print(Panel.fit(
+            f"[success]✓ Created task:[/]\n"
+            f"[task]{task}[/]\n"
+            f"[info]Project:[/] [project]{project}[/]\n"
+            f"[info]Tags:[/] {tag_display}",
+            title="Task Created",
+            border_style="green"
+        ))
 
 
 @app.command()
@@ -1244,8 +1358,17 @@ def list_tags():
     system = OSXSystem()
     manager = OmniFocusManager(system)
     tags = manager.get_all_tags()
-    for tag in sorted(tags):
-        typer.echo(tag)
+    
+    # Create a panel with all tags
+    tag_panel = Panel.fit(
+        "\n".join([f"[tag]{tag}[/]" for tag in sorted(tags)]),
+        title="[header]Available Tags[/]",
+        border_style="magenta",
+        padding=(1, 2)
+    )
+    
+    console.print(tag_panel)
+    console.print(f"[info]Total tags:[/] [bold]{len(tags)}[/bold]")
 
 
 @app.command(name="cleanup-tags")
@@ -1254,10 +1377,15 @@ def cleanup_tags():
     system = OSXSystem()
     manager = OmniFocusManager(system)
     count = manager.delete_untitled_tags()
+    
     if count == 0:
-        typer.echo("No empty or untitled tags found.")
+        console.print(Panel("[info]No empty or untitled tags found.[/]", border_style="green"))
     else:
-        typer.echo(f"Deleted {count} empty/untitled tag{'s' if count > 1 else ''}.")
+        console.print(Panel(
+            f"[success]Deleted {count} empty/untitled tag{'s' if count > 1 else ''}.[/]",
+            border_style="green",
+            title="Cleanup Complete"
+        ))
 
 
 @app.command(name="manage-tags")
