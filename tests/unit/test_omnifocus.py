@@ -5,7 +5,6 @@ from unittest.mock import patch, MagicMock, call
 import pytest
 from typer.testing import CliRunner
 from datetime import datetime, timezone
-import requests
 from omnifocus import (
     app,
     sanitize_task_text,
@@ -19,12 +18,16 @@ from omnifocus import (
 mock_system = MagicMock(spec=OSXSystem)
 mock_manager = OmniFocusManager(mock_system)
 
+
 # Patch the global instances
 @pytest.fixture(autouse=True)
 def patch_globals():
     """Patch global system and manager to prevent real task creation."""
-    with patch("omnifocus.system", mock_system), patch("omnifocus.manager", mock_manager):
+    with patch("omnifocus.system", mock_system), patch(
+        "omnifocus.manager", mock_manager
+    ):
         yield
+
 
 runner = CliRunner()
 
@@ -93,7 +96,7 @@ def test_add_task(manager, mock_system):
         project="Personal",
         tags=["home", "weekend"],
         note="Remember to do this",
-        flagged=True
+        flagged=True,
     )
     mock_system.open_url.assert_called_with(
         "omnifocus:///add?name=Test%20task&autosave=true&project=Personal&flag=true&tags=home%2Cweekend&note=Remember%20to%20do%20this"
@@ -111,7 +114,7 @@ def test_add_task_escaping(manager, mock_system):
     manager.add_task(
         "Test & task",
         note="Note with spaces & special chars: ?#",
-        tags=["tag with space"]
+        tags=["tag with space"],
     )
     mock_system.open_url.assert_called_with(
         "omnifocus:///add?name=Test%20%26%20task&autosave=true&project=today&flag=true&tags=tag%20with%20space&note=Note%20with%20spaces%20%26%20special%20chars%3A%20%3F%23"
@@ -139,7 +142,9 @@ def test_add_from_clipboard(mock_system_global, mock_manager_global):
     assert "Task two" in result.stdout
     assert "Task three" in result.stdout
     assert "Completed task" not in result.stdout
-    assert mock_manager_global.add_task.call_count == 0  # Should not add tasks in preview mode
+    assert (
+        mock_manager_global.add_task.call_count == 0
+    )  # Should not add tasks in preview mode
 
     # Reset mocks for actual add test
     mock_system_global.reset_mock()
@@ -148,7 +153,9 @@ def test_add_from_clipboard(mock_system_global, mock_manager_global):
     # Test actual add
     result = runner.invoke(app, ["add-tasks-from-clipboard"])
     assert result.exit_code == 0
-    assert mock_manager_global.add_task.call_count == 4  # Should have added 4 tasks (including duplicates)
+    assert (
+        mock_manager_global.add_task.call_count == 4
+    )  # Should have added 4 tasks (including duplicates)
 
 
 def test_get_all_tasks(manager, mock_system):
@@ -224,7 +231,9 @@ def test_add_command_with_url(mock_system_global, mock_requests):
     """Test adding a task from a URL using the add command."""
     # Mock the web request response
     mock_response = MagicMock()
-    mock_response.text = "<html><head><title>Test Page Title</title></head><body>content</body></html>"
+    mock_response.text = (
+        "<html><head><title>Test Page Title</title></head><body>content</body></html>"
+    )
     mock_requests.get.return_value = mock_response
 
     # Test adding a URL task (should use specified project)
@@ -233,8 +242,7 @@ def test_add_command_with_url(mock_system_global, mock_requests):
 
     # Verify the request was made with the correct headers
     mock_requests.get.assert_called_with(
-        "https://example.com",
-        headers={'User-Agent': 'Mozilla/5.0'}
+        "https://example.com", headers={"User-Agent": "Mozilla/5.0"}
     )
 
     # Verify the task was created with the correct URL and url tag
@@ -242,7 +250,17 @@ def test_add_command_with_url(mock_system_global, mock_requests):
     mock_system_global.open_url.assert_called_with(expected_url)
 
     # Test with a custom project and tags (should include url tag)
-    result = runner.invoke(app, ["add", "https://example.com", "--project", "Reading List", "--tag", "web,research"])
+    result = runner.invoke(
+        app,
+        [
+            "add",
+            "https://example.com",
+            "--project",
+            "Reading List",
+            "--tag",
+            "web,research",
+        ],
+    )
     assert result.exit_code == 0
     expected_url = "omnifocus:///add?name=Test%20Page%20Title&note=Source%3A%20https%3A%2F%2Fexample.com&autosave=true&flag=true&project=Reading%20List&tags=web%2Cresearch%2Curl"
     mock_system_global.open_url.assert_called_with(expected_url)
@@ -252,12 +270,14 @@ def test_add_command_with_url(mock_system_global, mock_requests):
 @patch("omnifocus.system")
 def test_add_command_with_url_error_handling(mock_system_global, mock_requests):
     """Test error handling when adding a task from a URL using the add command."""
+
     # Test network error
     class MockRequestException(Exception):
         pass
+
     mock_requests.exceptions.RequestException = MockRequestException
     mock_requests.get.side_effect = MockRequestException("Network error")
-    
+
     result = runner.invoke(app, ["add", "https://example.com"])
     assert result.exit_code == 0  # Should not crash
     assert "Error fetching URL: Network error" in result.stdout
@@ -268,7 +288,7 @@ def test_add_command_with_url_error_handling(mock_system_global, mock_requests):
     mock_response.text = "<html><head></head><body>content</body></html>"
     mock_requests.get.side_effect = None
     mock_requests.get.return_value = mock_response
-    
+
     result = runner.invoke(app, ["add", "https://example.com"])
     assert result.exit_code == 0
     expected_url = "omnifocus:///add?name=https%3A%2F%2Fexample.com&note=Source%3A%20https%3A%2F%2Fexample.com&autosave=true&flag=true&project=today&tags=url"
@@ -281,11 +301,15 @@ def test_add_command_with_regular_task(mock_system_global):
     # Test basic task
     result = runner.invoke(app, ["add", "Test task"])
     assert result.exit_code == 0
-    expected_url = "omnifocus:///add?name=Test%20task&autosave=true&flag=true&project=today&tags="
+    expected_url = (
+        "omnifocus:///add?name=Test%20task&autosave=true&flag=true&project=today&tags="
+    )
     mock_system_global.open_url.assert_called_with(expected_url)
 
     # Test with project and tags
-    result = runner.invoke(app, ["add", "Test task", "--project", "Work", "--tag", "urgent,meeting"])
+    result = runner.invoke(
+        app, ["add", "Test task", "--project", "Work", "--tag", "urgent,meeting"]
+    )
     assert result.exit_code == 0
     expected_url = "omnifocus:///add?name=Test%20task&autosave=true&flag=true&project=Work&tags=urgent%2Cmeeting"
     mock_system_global.open_url.assert_called_with(expected_url)
@@ -304,7 +328,7 @@ def test_fixup_url(mock_manager, mock_requests):
     mock_manager.get_all_tasks.return_value = [
         Task(id="task1", name="", note="Source: https://example.com"),
         Task(id="task2", name="Regular task", note=""),
-        Task(id="task3", name="", note="Source: https://example.org")
+        Task(id="task3", name="", note="Source: https://example.org"),
     ]
 
     mock_response1 = MagicMock()
@@ -318,10 +342,12 @@ def test_fixup_url(mock_manager, mock_requests):
     assert result.exit_code == 0
     assert "Found 2 tasks to update" in result.stdout
 
-    mock_manager.update_name.assert_has_calls([
-        call(mock_manager.get_all_tasks.return_value[0], "Example Website"),
-        call(mock_manager.get_all_tasks.return_value[2], "Example Org")
-    ])
+    mock_manager.update_name.assert_has_calls(
+        [
+            call(mock_manager.get_all_tasks.return_value[0], "Example Website"),
+            call(mock_manager.get_all_tasks.return_value[2], "Example Org"),
+        ]
+    )
 
     # update_note is not called in this case because the URLs are already in the notes
     # mock_manager.update_note.assert_called_once_with(
@@ -341,9 +367,10 @@ def test_fixup_url_error_handling(mock_manager, mock_requests):
     # Mock responses - one success, one failure
     mock_response = MagicMock()
     mock_response.text = "<html><head><title>Example Website</title></head></html>"
-    
+
     class MockRequestException(Exception):
         pass
+
     mock_requests.exceptions.RequestException = MockRequestException
     mock_requests.get.side_effect = [
         mock_response,  # First URL succeeds
@@ -372,7 +399,7 @@ def test_fixup_url_with_url_names(mock_manager, mock_requests):
     mock_manager.get_all_tasks.return_value = [
         Task(id="task1", name="https://example.com", note=""),
         Task(id="task2", name="Regular task", note=""),
-        Task(id="task3", name="https://example.org", note="")
+        Task(id="task3", name="https://example.org", note=""),
     ]
 
     # Mock webpage responses
@@ -380,7 +407,7 @@ def test_fixup_url_with_url_names(mock_manager, mock_requests):
     mock_response1.text = "<html><head><title>Example Website</title></head></html>"
     mock_response2 = MagicMock()
     mock_response2.text = "<html><head><title>Example Org</title></head></html>"
-    
+
     mock_requests.get.side_effect = [mock_response1, mock_response2]
 
     # Run the command
@@ -393,22 +420,34 @@ def test_fixup_url_with_url_names(mock_manager, mock_requests):
     assert "Updated task with title: Example Org" in result.stdout
 
     # Verify URL requests
-    mock_requests.get.assert_has_calls([
-        call("https://example.com", headers={'User-Agent': 'Mozilla/5.0'}),
-        call("https://example.org", headers={'User-Agent': 'Mozilla/5.0'}),
-    ])
+    mock_requests.get.assert_has_calls(
+        [
+            call("https://example.com", headers={"User-Agent": "Mozilla/5.0"}),
+            call("https://example.org", headers={"User-Agent": "Mozilla/5.0"}),
+        ]
+    )
 
     # Verify task updates
-    mock_manager.update_name.assert_has_calls([
-        call(mock_manager.get_all_tasks.return_value[0], "Example Website"),
-        call(mock_manager.get_all_tasks.return_value[2], "Example Org")
-    ])
-    
+    mock_manager.update_name.assert_has_calls(
+        [
+            call(mock_manager.get_all_tasks.return_value[0], "Example Website"),
+            call(mock_manager.get_all_tasks.return_value[2], "Example Org"),
+        ]
+    )
+
     # Verify note updates
-    mock_manager.update_note.assert_has_calls([
-        call(mock_manager.get_all_tasks.return_value[0], "Source: https://example.com"),
-        call(mock_manager.get_all_tasks.return_value[2], "Source: https://example.org")
-    ])
+    mock_manager.update_note.assert_has_calls(
+        [
+            call(
+                mock_manager.get_all_tasks.return_value[0],
+                "Source: https://example.com",
+            ),
+            call(
+                mock_manager.get_all_tasks.return_value[2],
+                "Source: https://example.org",
+            ),
+        ]
+    )
 
 
 @patch("omnifocus.requests")
@@ -444,8 +483,7 @@ def test_fixup_url_with_url_in_name(mock_manager, mock_requests):
 
     # Verify URL request
     mock_requests.get.assert_called_once_with(
-        "https://example.com",
-        headers={'User-Agent': 'Mozilla/5.0'}
+        "https://example.com", headers={"User-Agent": "Mozilla/5.0"}
     )
 
 
@@ -480,8 +518,7 @@ def test_fixup_url_with_url_in_note(mock_manager, mock_requests):
 
     # Verify URL request
     mock_requests.get.assert_called_once_with(
-        "https://example.org",
-        headers={'User-Agent': 'Mozilla/5.0'}
+        "https://example.org", headers={"User-Agent": "Mozilla/5.0"}
     )
 
 
@@ -500,10 +537,13 @@ def test_fixup_url_note_update_error(mock_manager, mock_requests):
     # Run the command
     result = runner.invoke(app, ["fixup-url"])
     assert result.exit_code == 0  # The command handles exceptions gracefully
-    
+
     # Verify error output
     assert "Found 1 tasks to update" in result.stdout
-    assert "Error processing task" in result.stdout or "Failed to update note" in result.stdout
+    assert (
+        "Error processing task" in result.stdout
+        or "Failed to update note" in result.stdout
+    )
 
     # Verify title wasn't updated after note update failed
     mock_manager.update_name.assert_not_called()
@@ -515,15 +555,15 @@ def test_update_task(manager, mock_system):
     task = Task(name="Old Name", id="123")
     manager.update_name(task, "New Name")
     mock_system.run_javascript.assert_called_with(
-        '\n            function run() {\n' +
-        '                const of = Application(\'OmniFocus\');\n' +
-        '                of.includeStandardAdditions = true;\n\n' +
-        '                const doc = of.defaultDocument;\n' +
-        '                const task = doc.flattenedTasks.whose({id: "123"})()[0];\n\n' +
-        '                if (task) {\n' +
-        '                    task.name = "New Name";\n' +
-        '                }\n' +
-        '            }\n        '
+        "\n            function run() {\n"
+        + "                const of = Application('OmniFocus');\n"
+        + "                of.includeStandardAdditions = true;\n\n"
+        + "                const doc = of.defaultDocument;\n"
+        + '                const task = doc.flattenedTasks.whose({id: "123"})()[0];\n\n'
+        + "                if (task) {\n"
+        + '                    task.name = "New Name";\n'
+        + "                }\n"
+        + "            }\n        "
     )
 
 
@@ -532,33 +572,145 @@ def test_update_note(manager, mock_system):
     task = Task(name="Task Name", id="123")
     manager.update_note(task, "New Note")
     mock_system.run_javascript.assert_called_with(
-        '\n            function run() {\n' +
-        '                const of = Application(\'OmniFocus\');\n' +
-        '                of.includeStandardAdditions = true;\n\n' +
-        '                const doc = of.defaultDocument;\n' +
-        '                const task = doc.flattenedTasks.whose({id: "123"})()[0];\n\n' +
-        '                if (task) {\n' +
-        '                    task.note = "New Note";\n' +
-        '                }\n' +
-        '            }\n        '
+        "\n            function run() {\n"
+        + "                const of = Application('OmniFocus');\n"
+        + "                of.includeStandardAdditions = true;\n\n"
+        + "                const doc = of.defaultDocument;\n"
+        + '                const task = doc.flattenedTasks.whose({id: "123"})()[0];\n\n'
+        + "                if (task) {\n"
+        + '                    task.note = "New Note";\n'
+        + "                }\n"
+        + "            }\n        "
     )
 
 
 def test_complete(manager, mock_system):
-    """Test completing a task using a Task object."""
-    task = Task(name="Task Name", id="123")
-    manager.complete(task)
-    mock_system.run_javascript.assert_called_with(
-        '\n            function run() {\n' +
-        '                const of = Application(\'OmniFocus\');\n' +
-        '                of.includeStandardAdditions = true;\n\n' +
-        '                const doc = of.defaultDocument;\n' +
-        '                const task = doc.flattenedTasks.whose({id: "123"})()[0];\n\n' +
-        '                if (task) {\n' +
-        '                    task.markComplete();\n' +
-        '                    return "Task completed successfully";\n' +
-        '                } else {\n' +
-        '                    throw new Error("Task not found");\n' +
-        '                }\n' +
-        '            }\n        '
+    """Test task completion functionality."""
+    # Setup mock task
+    task = Task(
+        id="test-id",
+        name="Test Task",
+        project="Test Project",
+        flagged=True,
+        tags=["tag1", "tag2"],
+        note="Test note",
     )
+
+    # Setup mock response
+    mock_system.run_javascript.return_value = "Task completed successfully"
+
+    # Call the method
+    result = manager.complete(task)
+
+    # Verify the result
+    assert result == "Task completed successfully"
+    mock_system.run_javascript.assert_called_once()
+    assert "test-id" in mock_system.run_javascript.call_args[0][0]
+
+
+def test_remove_tag_from_task(manager, mock_system):
+    """Test removing a tag from a task."""
+    # Setup mock task
+    task = Task(
+        id="test-id",
+        name="Test Task",
+        project="Test Project",
+        flagged=True,
+        tags=["testing", "tag-to-remove"],
+        note="Test note",
+    )
+
+    # Call the method
+    result = manager.remove_tag_from_task(task, "tag-to-remove")
+
+    # Verify the result
+    assert result is True
+    mock_system.open_url.assert_called_once()
+    url_call = mock_system.open_url.call_args[0][0]
+    assert "name=Test%20Task" in url_call
+    assert "project=Test%20Project" in url_call
+    assert "flag=true" in url_call
+    assert "tags=testing" in url_call
+    assert "tag-to-remove" not in url_call
+
+    # Verify the original task was completed
+    mock_system.run_javascript.assert_called_once()
+    assert "test-id" in mock_system.run_javascript.call_args[0][0]
+
+
+def test_add_tag_to_task(manager, mock_system):
+    """Test adding a tag to a task."""
+    # Setup mock task
+    task = Task(
+        id="test-id",
+        name="Test Task",
+        project="Test Project",
+        flagged=True,
+        tags=["testing"],
+        note="Test note",
+    )
+
+    # Reset mock
+    mock_system.reset_mock()
+
+    # Call the method
+    result = manager.add_tag_to_task(task, "new-tag")
+
+    # Verify the result
+    assert result is True
+    mock_system.open_url.assert_called_once()
+    url_call = mock_system.open_url.call_args[0][0]
+    assert "name=Test%20Task" in url_call
+    assert "project=Test%20Project" in url_call
+    assert "flag=true" in url_call
+    assert "tags=testing%2Cnew-tag" in url_call
+
+    # Verify the original task was completed
+    mock_system.run_javascript.assert_called_once()
+    assert "test-id" in mock_system.run_javascript.call_args[0][0]
+
+
+def test_clear_tags_from_task(manager, mock_system):
+    """Test clearing all tags from a task."""
+    # Setup mock task
+    task = Task(
+        id="test-id",
+        name="Test Task",
+        project="Test Project",
+        flagged=True,
+        tags=["testing", "tag1", "tag2"],
+        note="Test note",
+    )
+
+    # Reset mock
+    mock_system.reset_mock()
+
+    # Call the method
+    result = manager.clear_tags_from_task(task)
+
+    # Verify the result
+    assert result is True
+    mock_system.open_url.assert_called_once()
+    url_call = mock_system.open_url.call_args[0][0]
+    assert "name=Test%20Task" in url_call
+    assert "project=Test%20Project" in url_call
+    assert "flag=true" in url_call
+    assert "tags=" not in url_call
+
+    # Verify the original task was completed
+    mock_system.run_javascript.assert_called_once()
+    assert "test-id" in mock_system.run_javascript.call_args[0][0]
+
+
+def test_get_all_tags(manager, mock_system):
+    """Test getting all tags from OmniFocus."""
+    # Setup mock response
+    mock_system.run_javascript.return_value = '["tag1", "tag2", "testing"]'
+
+    # Call the method
+    result = manager.get_all_tags()
+
+    # Verify the result
+    assert result == ["tag1", "tag2", "testing"]
+    mock_system.run_javascript.assert_called_once()
+    assert "flattenedTags" in mock_system.run_javascript.call_args[0][0]
