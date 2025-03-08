@@ -14,19 +14,19 @@ I'll help you implement an `append_task` method to the `OmniFocusManager` class 
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: omnifocus.py
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let me also check the test functions to understand how to add a test for the new `append_task` method:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 <details>
             <summary>Grep search for "test_" • **7** files</summary>
@@ -153,43 +153,43 @@ _****_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let me check the test file to understand how to implement the test for the new `append_task` method:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: tests/unit/test_omnifocus.py
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Now, let me check the `update_task_note` method to understand how to implement the `append_task` method:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: omnifocus.py
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let me also check if there's a test for the `test_update` command:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: omnifocus.py
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Based on the code I've reviewed, I'll now implement the `append_task` method in the `OmniFocusManager` class and add a test command for it. The `append_task` method will append text to an existing task's note.
 
@@ -197,16 +197,16 @@ Here's my implementation:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
           """
           self.system.run_javascript(update_script)
-- 
-+         
+-
++
 +     def append_task_note(self, task_id: str, note_text: str) -> None:
 +         """Append text to a task's existing note by ID.
-+         
++
 +         Args:
 +             task_id: The ID of the task to update
 +             note_text: The text to append to the task's note
@@ -215,10 +215,10 @@ _****_
 +             function run() {{
 +                 const of = Application('OmniFocus');
 +                 of.includeStandardAdditions = true;
-+ 
++
 +                 const doc = of.defaultDocument;
 +                 const task = doc.flattenedTasks.whose({{id: "{task_id}"}})()[0];
-+ 
++
 +                 if (task) {{
 +                     const currentNote = task.note();
 +                     const separator = currentNote && currentNote.length > 0 ? "\\n\\n" : "";
@@ -230,38 +230,38 @@ _****_
 +             }}
 +         """
 +         return self.system.run_javascript(append_script)
-+ 
++
       def get_inbox_tasks(self) -> List[Task]:
           """Get all tasks from the inbox."""
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Now, let's add a test for the `append_task_note` method in the test file:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
-      
+
       with pytest.raises(Exception, match="Task not found"):
 -         manager.complete_task("nonexistent_id")
 +         manager.complete_task(task_id)
-+ 
-+ 
++
++
 + def test_append_task_note(manager, mock_system):
 +     """Test appending text to a task's note."""
 +     # Test successful note append
 +     task_id = "ABC123"
 +     note_text = "Additional information"
 +     mock_system.run_javascript.return_value = "Note appended successfully"
-+     
++
 +     result = manager.append_task_note(task_id, note_text)
 +     assert result == "Note appended successfully"
-+     
++
 +     # Verify the JavaScript was called with correct parameters
 +     mock_system.run_javascript.assert_called_once()
 +     js_call = mock_system.run_javascript.call_args[0][0]
@@ -269,45 +269,45 @@ _****_
 +     assert "const currentNote = task.note()" in js_call
 +     assert "const separator = currentNote && currentNote.length > 0" in js_call
 +     assert f'"{note_text}"' in js_call
-+     
++
 +     # Test with special characters that need escaping
 +     mock_system.reset_mock()
 +     note_with_quotes = 'Note with "quotes"'
 +     manager.append_task_note(task_id, note_with_quotes)
 +     js_call = mock_system.run_javascript.call_args[0][0]
 +     assert 'Note with \\"quotes\\"' in js_call
-+     
++
 +     # Test task not found
 +     mock_system.reset_mock()
 +     mock_system.run_javascript.side_effect = Exception("Task not found")
-+     
++
 +     with pytest.raises(Exception, match="Task not found"):
 +         manager.append_task_note(task_id, note_text)
-  
-  
+
+
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Now, let's add a command to test the `append_task_note` functionality:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
           print("Could not find test task to update")
-  
-+ 
+
++
 + @app.command()
 + def test_append():
 +     """Test appending to a task's note by creating a task and appending to its note"""
 +     # First create a task with a unique name
 +     test_name = f"TEST-{uuid.uuid4().hex[:8]}"
 +     manager.add_task(test_name, note="This is the initial note")
-+     
++
 +     # Get the task ID
 +     tasks = manager.get_incomplete_tasks()
 +     task_id = None
@@ -316,16 +316,16 @@ _****_
 +             task_id = task['id']
 +             note = task['note']
 +             break
-+     
++
 +     if task_id:
 +         # Append to the task note
 +         append_text = f"Appended at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 +         print(f"Appending to task '{test_name}' note: '{append_text}'")
 +         print(f"Original note: '{note}'")
-+         
++
 +         result = manager.append_task_note(task_id, append_text)
 +         print(f"Result: {result}")
-+         
++
 +         # Verify the note was updated
 +         updated_tasks = manager.get_incomplete_tasks()
 +         for task in updated_tasks:
@@ -334,28 +334,26 @@ _****_
 +                 break
 +     else:
 +         print("Could not find test task to update")
-+ 
-  
++
+
   @app.command()
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Great! I've successfully implemented the `append_task_note` method and added both a unit test and a command to test it. Let's run the unit test to make sure everything works as expected:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Cancelled
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
@@ -371,89 +369,85 @@ I'll modify the `append_task_note` method to accept a task object instead of a t
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: omnifocus.py
 
 ---
 
-_****_
+_\*\*\*\*_
 
 I need to check how tasks are retrieved and what fields they have, especially if they include a task_id:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: omnifocus.py
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Now I understand that the `Task` class doesn't have an `id` field, but the tasks returned by `get_incomplete_tasks()` are dictionaries with `id`, `name`, and `note` fields. Let me update the `append_task_note` method to accept either a task dictionary or a task ID:
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let me try again with a more specific edit:
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let me try a different approach by creating a new method that accepts a task object:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
           return self.system.run_javascript(append_script)
-          
+
 +     def append_to_task(self, task: dict, note_text: str) -> None:
 +         """Append text to a task's existing note using a task object.
-+         
++
 +         Args:
 +             task: A task dictionary with an 'id' field
 +             note_text: The text to append to the task's note
 +         """
 +         if not isinstance(task, dict) or 'id' not in task:
 +             raise ValueError("Task must be a dictionary with an 'id' field")
-+             
++
 +         return self.append_task_note(task['id'], note_text)
-+ 
++
       def get_inbox_tasks(self) -> List[Task]:
           """Get all tasks from the inbox."""
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Now, let's add a test for the new `append_to_task` method:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
           manager.append_task_note(task_id, note_text)
-  
-+ 
+
++
 + def test_append_to_task(manager, mock_system):
 +     """Test appending text to a task's note using a task object."""
 +     # Create a mock task dictionary
@@ -462,39 +456,39 @@ _****_
 +         'name': 'Test Task',
 +         'note': 'Original note'
 +     }
-+     
++
 +     note_text = "Additional information"
 +     mock_system.run_javascript.return_value = "Note appended successfully"
-+     
++
 +     # Test successful append
 +     result = manager.append_to_task(task, note_text)
 +     assert result == "Note appended successfully"
-+     
++
 +     # Verify the JavaScript was called with correct parameters
 +     mock_system.run_javascript.assert_called_once()
 +     js_call = mock_system.run_javascript.call_args[0][0]
 +     assert f'id: "{task["id"]}"' in js_call
-+     
++
 +     # Test with invalid task object
 +     with pytest.raises(ValueError, match="Task must be a dictionary with an 'id' field"):
 +         manager.append_to_task("not a dictionary", note_text)
-+     
++
 +     with pytest.raises(ValueError, match="Task must be a dictionary with an 'id' field"):
 +         manager.append_to_task({}, note_text)
-+ 
-  
++
+
   @patch("omnifocus.manager")
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Now, let's update the `test_append` command to use the new `append_to_task` method:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
       # Get the task ID
@@ -507,7 +501,7 @@ _****_
 -             note = task['note']
 +             test_task = task
               break
-      
+
 -     if task_id:
 +     if test_task:
           # Append to the task note
@@ -515,12 +509,12 @@ _****_
           print(f"Appending to task '{test_name}' note: '{append_text}'")
 -         print(f"Original note: '{note}'")
 +         print(f"Original note: '{test_task['note']}'")
-          
+
 -         result = manager.append_task_note(task_id, append_text)
 +         # Use the new append_to_task method
 +         result = manager.append_to_task(test_task, append_text)
           print(f"Result: {result}")
-          
+
           # Verify the note was updated
           updated_tasks = manager.get_incomplete_tasks()
           for task in updated_tasks:
@@ -532,9 +526,7 @@ _****_
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
@@ -552,49 +544,49 @@ First, I need to understand how to get the task ID from a Pydantic Task object. 
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: omnifocus.py
 
 ---
 
-_****_
+_\*\*\*\*_
 
 I see that the `Task` Pydantic model doesn't have an `id` field. Let me check how tasks are retrieved and how they're associated with IDs:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: omnifocus.py
 
 ---
 
-_****_
+_\*\*\*\*_
 
 I see the issue now. The `Task` Pydantic model doesn't have an ID field, but we need to modify the model to include one. Let's update the `Task` class and then modify the `append_task_note` method to accept a `Task` object:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
       due_date: Optional[datetime] = None
       creation_date: Optional[datetime] = None
 +     id: Optional[str] = None
-  
-  
+
+
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Now, let's update the `_get_tasks_with_filter` method to include the task ID in the returned Task objects:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
                       tags: Array.from(task.tags()).map(t => t.name()),
@@ -603,178 +595,168 @@ _****_
 +                     creation_date: task.creationDate() ? task.creationDate().toISOString() : null,
 +                     id: task.id()
                   }}));
-  
+
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Now, let's update the `append_task_note` method to accept a `Task` object instead of a task_id:
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let me try a different approach by creating a new method that accepts a Task object:
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let me try a more specific edit:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
           return self.append_task_note(task['id'], note_text)
-  
+
 +     def append_to_task(self, task: Task, note_text: str) -> None:
 +         """Append text to a task's existing note using a Task object.
-+         
++
 +         Args:
 +             task: A Task object with an id field
 +             note_text: The text to append to the task's note
 +         """
 +         if not task.id:
 +             raise ValueError("Task must have an id field")
-+             
++
 +         return self.append_task_note(task.id, note_text)
-+ 
++
       def get_inbox_tasks(self) -> List[Task]:
           """Get all tasks from the inbox."""
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Now I need to update the test for the `append_to_task` method:
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let me try a more specific edit for the test:
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let me try a different approach by creating a new test function:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
           manager.append_to_task({}, note_text)
-  
-+ 
+
++
 + def test_append_to_task_with_pydantic(manager, mock_system):
 +     """Test appending text to a task's note using a Pydantic Task object."""
 +     from omnifocus import Task
-+     
++
 +     # Create a Pydantic Task object
 +     task = Task(
 +         name="Test Task",
 +         project="Test Project",
 +         id="ABC123"
 +     )
-+     
++
 +     note_text = "Additional information"
 +     mock_system.run_javascript.return_value = "Note appended successfully"
-+     
++
 +     # Test successful append
 +     result = manager.append_to_task(task, note_text)
 +     assert result == "Note appended successfully"
-+     
++
 +     # Verify the JavaScript was called with correct parameters
 +     mock_system.run_javascript.assert_called_once()
 +     js_call = mock_system.run_javascript.call_args[0][0]
 +     assert f'id: "{task.id}"' in js_call
-+     
++
 +     # Test with task without ID
 +     task_without_id = Task(name="Test Task Without ID")
 +     with pytest.raises(ValueError, match="Task must have an id field"):
 +         manager.append_to_task(task_without_id, note_text)
-+ 
-  
++
+
   @patch("omnifocus.manager")
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Now, let's update the `test_append` command to use the new `append_to_task` method with a Task object:
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let me try a more specific edit for the test_append command:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
           print("Could not find test task to update")
-  
-+ 
+
++
 + @app.command()
 + def test_append_pydantic():
 +     """Test appending to a task's note using a Pydantic Task object"""
 +     # First create a task with a unique name
 +     test_name = f"TEST-{uuid.uuid4().hex[:8]}"
 +     manager.add_task(test_name, note="This is the initial note")
-+     
++
 +     # Get all tasks and find our test task
 +     all_tasks = manager.get_all_tasks()
 +     test_task = next((task for task in all_tasks if task.name == test_name), None)
-+     
++
 +     if test_task:
 +         # Append to the task note
 +         append_text = f"Appended at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 +         print(f"Appending to task '{test_name}' note: '{append_text}'")
-+         
++
 +         # Use the append_to_task method with a Pydantic Task object
 +         result = manager.append_to_task(test_task, append_text)
 +         print(f"Result: {result}")
-+         
++
 +         # Verify the note was updated by getting the task again
 +         updated_tasks = manager.get_incomplete_tasks()
 +         for task in updated_tasks:
@@ -783,20 +765,20 @@ _****_
 +                 break
 +     else:
 +         print("Could not find test task to update")
-+ 
-  
++
+
   @app.command()
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let's run the unit test to make sure everything works as expected:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```bash
 cd $HOME/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py::test_append_to_task_with_pydantic -v
@@ -812,7 +794,7 @@ gits/omnifocus_cli/.venv/bin
 rootdir: $HOME/gits/omnifocus_cli
 configfile: pyproject.toml
 collected 1 item
-                           
+
 
 tests/unit/test_omnifocus.py::test_append_to_task_with_pydantic PASSED
                      [100%]
@@ -824,13 +806,13 @@ tests/unit/test_omnifocus.py::test_append_to_task_with_pydantic PASSED
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Great! The test for the `append_to_task` method with a Pydantic Task object passed. Let's also try running the `test_append_pydantic` command to make sure it works in practice:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```bash
 cd $HOME/gits/omnifocus_cli && python -m omnifocus test_append_pydantic
@@ -844,19 +826,19 @@ Try 'omnifocus.py --help' for help.
 │ No such command 'test_append_pydantic'.                                                                  │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
-igors-Mac-mini in omnifocus_cli on  main [$!] via 🐍 v3.13.0 (omnifocus_cli) on ☁️   
+igors-Mac-mini in omnifocus_cli on  main [$!] via 🐍 v3.13.0 (omnifocus_cli) on ☁️
 ❯
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 It seems the command isn't being recognized. Let's check if we need to install the package in development mode:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```bash
 cd $HOME/gits/omnifocus_cli && python -m omnifocus --help
@@ -904,13 +886,13 @@ cd $HOME/gits/omnifocus_cli && python -m omnifocus --help
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Great! I can see that both `test_append` and `test_append_pydantic` commands are available. Let's try running the `test_append_pydantic` command:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```bash
 cd $HOME/gits/omnifocus_cli && python -m omnifocus test-append-pydantic
@@ -928,13 +910,13 @@ Updated note: 'This is the initial note
 
 Appended at 2025-03-06 06:04:04'
 
-igors-Mac-mini in omnifocus_cli on  main [$!] via 🐍 v3.13.0 (omnifocus_cli) on ☁️   took 2s 
+igors-Mac-mini in omnifocus_cli on  main [$!] via 🐍 v3.13.0 (omnifocus_cli) on ☁️   took 2s
 ❯
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Perfect! The `test-append-pydantic` command works correctly. It creates a task, retrieves it as a Pydantic Task object, and then successfully appends to its note using the `append_to_task` method.
 
@@ -962,7 +944,7 @@ I'll update the codebase to eliminate raw task IDs and use Task objects whenever
 
 ---
 
-_****_
+_\*\*\*\*_
 
 <details>
             <summary>Grep search for "task_id" • **6** files</summary>
@@ -1048,126 +1030,126 @@ _****_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Now I'll check the methods that need to be updated to use Task objects instead of raw task IDs:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: omnifocus.py
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: omnifocus.py
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Now I'll update these methods to use Task objects instead of raw task IDs. Let's start with creating new methods for each of these operations that accept Task objects:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
           self.system.run_javascript(update_script)
-          
+
 +     def update_task(self, task: Task, new_name: str) -> None:
 +         """Update a task's name using a Task object.
-+         
++
 +         Args:
 +             task: The Task object to update
 +             new_name: The new name for the task
 +         """
 +         if not task.id:
 +             raise ValueError("Task must have an id field")
-+             
++
 +         self.update_task_name(task.id, new_name)
-+ 
++
       def update_task_note(self, task_id: str, note: str) -> None:
           """Update a task's note by ID."""
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
           self.system.run_javascript(update_script)
-          
+
 +     def update_note(self, task: Task, note: str) -> None:
 +         """Update a task's note using a Task object.
-+         
++
 +         Args:
 +             task: The Task object to update
 +             note: The new note for the task
 +         """
 +         if not task.id:
 +             raise ValueError("Task must have an id field")
-+             
++
 +         self.update_task_note(task.id, note)
-+ 
++
       def append_task_note(self, task_id: str, note_text: str) -> None:
           """Append text to a task's existing note by ID.
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
           return self.system.run_javascript(javascript)
-          
+
 -     def get_all_tags(self) -> List[str]:
 -         """Get all tags from OmniFocus.
 +     def complete(self, task: Task) -> str:
 +         """Complete a task using a Task object.
-+         
++
 +         Args:
 +             task: The Task object to complete
-              
+
           Returns:
 -             List[str]: List of all tag names in OmniFocus
 -         """
 +             str: Success message if task was completed
-+             
++
 +         Raises:
 +             ValueError: If task doesn't have an ID
 +             Exception: If task couldn't be found or completed
 +         """
 +         if not task.id:
 +             raise ValueError("Task must have an id field")
-+             
++
           javascript = """
               function run() {
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let me fix the issue with the `get_all_tags` method:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
               raise ValueError("Task must have an id field")
-              
+
 -         javascript = """
 -             function run() {
 -                 const of = Application('OmniFocus');
 -                 of.includeStandardAdditions = true;
-- 
+-
 -                 const doc = of.defaultDocument;
 -                 const tags = doc.flattenedTags();
--                 
+-
 -                 const tagNames = tags.map(tag => tag.name());
 -                 return JSON.stringify(tagNames);
 -             }
@@ -1175,13 +1157,13 @@ _****_
 -         result = self.system.run_javascript(javascript)
 -         return json.loads(result)
 +         return self.complete_task(task.id)
-  
+
       def delete_untitled_tags(self) -> int:
           return int(result)
-  
+
 +     def get_all_tags(self) -> List[str]:
 +         """Get all tags from OmniFocus.
-+         
++
 +         Returns:
 +             List[str]: List of all tag names in OmniFocus
 +         """
@@ -1189,46 +1171,44 @@ _****_
 +             function run() {
 +                 const of = Application('OmniFocus');
 +                 of.includeStandardAdditions = true;
-+ 
++
 +                 const doc = of.defaultDocument;
 +                 const tags = doc.flattenedTags();
-+                 
++
 +                 const tagNames = tags.map(tag => tag.name());
 +                 return JSON.stringify(tagNames);
 +             }
 +         """
 +         result = self.system.run_javascript(javascript)
 +         return json.loads(result)
-+ 
-  
++
+
   def sanitize_task_text(task: str) -> str:
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Now let's update the `test_update` command to use the new `update_task` method:
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let me try a more specific edit:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
       manager.add_task(test_name, note="This is a test task")
-  
+
 -     # Get the task ID
 -     tasks = manager.get_incomplete_tasks()
 -     task_id = None
@@ -1239,7 +1219,7 @@ _****_
 +     # Get all tasks and find our test task
 +     all_tasks = manager.get_all_tasks()
 +     test_task = next((task for task in all_tasks if task.name == test_name), None)
-  
+
 -     if task_id:
 -         # Update the task name
 +     if test_task:
@@ -1254,49 +1234,45 @@ _****_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Now let's update the `test_complete` command to use the new `complete` method:
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let me try a more specific edit:
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let me try a different approach:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: omnifocus.py
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let me check the test_complete command:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 <details>
             <summary>Grep search for "def test_complete" • **5** files</summary>
@@ -1313,32 +1289,32 @@ _****_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: omnifocus.py
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Now I'll update the `test_complete` command:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
       manager.add_task(test_task_name, project="today", flagged=True)
-      
+
 -     # Get all incomplete tasks
 -     tasks = manager.get_incomplete_tasks()
--     
+-
 -     # Find our test task
 -     test_task = next((task for task in tasks if task["name"] == test_task_name), None)
 +     # Get all tasks and find our test task
 +     all_tasks = manager.get_all_tasks()
 +     test_task = next((task for task in all_tasks if task.name == test_task_name), None)
-      
+
       if test_task:
           try:
 -             result = manager.complete_task(test_task["id"])
@@ -1349,64 +1325,62 @@ _****_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Now let's update the `complete` command to use Task objects:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: omnifocus.py
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: omnifocus.py
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let's update the `complete` command to use Task objects:
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let me try a more specific edit:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
-  
+
           # Get all incomplete tasks once to look up IDs
 -         incomplete_tasks = manager.get_incomplete_tasks()
 +         all_incomplete_tasks = manager.get_all_tasks()
-          
+
           # Complete each task
-          
+
           for num in numbers:
 -             selected_task_name = all_tasks[num - 1][1].name
 -             task_to_complete = next((task for task in incomplete_tasks if task["name"] == selected_task_name), None)
 +             selected_task = all_tasks[num - 1][1]
 +             # Find the task with the same name in all_incomplete_tasks to ensure we have the ID
 +             task_to_complete = next((task for task in all_incomplete_tasks if task.name == selected_task.name), None)
-              
+
               if not task_to_complete:
 -                 errors.append(f"Could not find task {num}: {selected_task_name} (may be completed already)")
 +                 errors.append(f"Could not find task {num}: {selected_task.name} (may be completed already)")
                   continue
-                  
+
               try:
 -                 result = manager.complete_task(task_to_complete["id"])
 -                 completed.append(f"✓ {num}: {selected_task_name}")
@@ -1415,44 +1389,44 @@ _****_
               except Exception as e:
 -                 errors.append(f"Error completing task {num}: {selected_task_name} - {str(e)}")
 +                 errors.append(f"Error completing task {num}: {selected_task.name} - {str(e)}")
-          
+
           # Print results
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Now let's update the `fixup_url` command to use Task objects:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: omnifocus.py
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: omnifocus.py
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let's update the `fixup_url` command to use Task objects:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
   def fixup_url():
       """Find tasks that have empty names or URLs as names, and update them with webpage titles."""
 -     tasks_data = manager.get_incomplete_tasks()
 +     all_tasks = manager.get_all_tasks()
-  
+
       # Find tasks with URLs in notes or as names
       url_pattern = r'(https?://[^\s)"]+)'
       tasks_to_update = []
@@ -1472,9 +1446,9 @@ _****_
 -             tasks_to_update.append((task['id'], task['name'].strip(), ""))
 +         elif re.match(url_pattern, task.name.strip()):
 +             tasks_to_update.append((task, task.name.strip(), ""))
-  
+
       if not tasks_to_update:
-  
+
       # Update each task
 -     for task_id, url, existing_note in tasks_to_update:
 +     for task, url, existing_note in tasks_to_update:
@@ -1487,136 +1461,134 @@ _****_
 +                     manager.update_note(task, note)
                       print(f"✓ Moved URL to note: {url}")
                   except Exception as e:
-  
+
               # Update the task name
 -             manager.update_task_name(task_id, title)
 +             manager.update_task(task, title)
               print(f"✓ Updated task with title: {title}")
-  
+
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let's update the `test_update` command:
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let's add unit tests for the new methods:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
       mock_manager.update_task_name.assert_not_called()
       mock_requests.get.assert_not_called()
-+ 
-+ 
++
++
 + def test_update_task(manager, mock_system):
 +     """Test updating a task's name using a Task object."""
 +     from omnifocus import Task
-+     
++
 +     # Create a Pydantic Task object
 +     task = Task(
 +         name="Test Task",
 +         project="Test Project",
 +         id="ABC123"
 +     )
-+     
++
 +     new_name = "Updated Task Name"
-+     
++
 +     # Test successful update
 +     manager.update_task(task, new_name)
-+     
++
 +     # Verify the JavaScript was called with correct parameters
 +     mock_system.run_javascript.assert_called_once()
 +     js_call = mock_system.run_javascript.call_args[0][0]
 +     assert f'id: "{task.id}"' in js_call
 +     assert f'task.name = "{new_name}"' in js_call
-+     
++
 +     # Test with task without ID
 +     task_without_id = Task(name="Test Task Without ID")
 +     with pytest.raises(ValueError, match="Task must have an id field"):
 +         manager.update_task(task_without_id, new_name)
-+ 
-+ 
++
++
 + def test_update_note(manager, mock_system):
 +     """Test updating a task's note using a Task object."""
 +     from omnifocus import Task
-+     
++
 +     # Create a Pydantic Task object
 +     task = Task(
 +         name="Test Task",
 +         project="Test Project",
 +         id="ABC123"
 +     )
-+     
++
 +     note = "This is a test note"
-+     
++
 +     # Test successful update
 +     manager.update_note(task, note)
-+     
++
 +     # Verify the JavaScript was called with correct parameters
 +     mock_system.run_javascript.assert_called_once()
 +     js_call = mock_system.run_javascript.call_args[0][0]
 +     assert f'id: "{task.id}"' in js_call
 +     assert f'task.note = "{note}"' in js_call
-+     
++
 +     # Test with task without ID
 +     task_without_id = Task(name="Test Task Without ID")
 +     with pytest.raises(ValueError, match="Task must have an id field"):
 +         manager.update_note(task_without_id, note)
-+ 
-+ 
++
++
 + def test_complete(manager, mock_system):
 +     """Test completing a task using a Task object."""
 +     from omnifocus import Task
-+     
++
 +     # Create a Pydantic Task object
 +     task = Task(
 +         name="Test Task",
 +         project="Test Project",
 +         id="ABC123"
 +     )
-+     
++
 +     mock_system.run_javascript.return_value = "Task completed successfully"
-+     
++
 +     # Test successful completion
 +     result = manager.complete(task)
 +     assert result == "Task completed successfully"
-+     
++
 +     # Verify the JavaScript was called with correct parameters
 +     mock_system.run_javascript.assert_called_once()
 +     js_call = mock_system.run_javascript.call_args[0][0]
 +     assert f'id: "{task.id}"' in js_call
 +     assert "task.markComplete()" in js_call
-+     
++
 +     # Test with task without ID
 +     task_without_id = Task(name="Test Task Without ID")
 +     with pytest.raises(ValueError, match="Task must have an id field"):
 +         manager.complete(task_without_id)
-  
+
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let's run the tests to make sure everything works:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```bash
 cd $HOME/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py::test_update_task tests/unit/test_omnifocus.py::test_update_note tests/unit/test_omnifocus.py::test_complete -v
@@ -1624,7 +1596,7 @@ cd $HOME/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py::te
 
 ```
 
-igors-Mac-mini in omnifocus_cli on  main [$!] via 🐍 v3.13.0 (omnifocus_cli) on ☁️   took 2s 
+igors-Mac-mini in omnifocus_cli on  main [$!] via 🐍 v3.13.0 (omnifocus_cli) on ☁️   took 2s
 <_note tests/unit/test_omnifocus.py::test_complete -v
 =========================================== test session starts ============================================
 platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- $HOME/gits/omnifocus_cli/.venv/bin
@@ -1632,7 +1604,7 @@ platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- $HOME/gits/omnif
 cachedir: .pytest_cache
 rootdir: $HOME/gits/omnifocus_cli
 configfile: pyproject.toml
-collected 3 items                                                                                          
+collected 3 items
 
 tests/unit/test_omnifocus.py::test_update_task PASSED                                                [ 33%]
 tests/unit/test_omnifocus.py::test_update_note PASSED                                                [ 66%]
@@ -1640,13 +1612,13 @@ tests/unit/test_omnifocus.py::test_complete PASSED                              
 
 ============================================ 3 passed in 0.24s =============================================
 
-igors-Mac-mini in omnifocus_cli on  main [$!] via 🐍 v3.13.0 (omnifocus_cli) on ☁️   
+igors-Mac-mini in omnifocus_cli on  main [$!] via 🐍 v3.13.0 (omnifocus_cli) on ☁️
 ❯
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Great! All the tests for the new methods that use Task objects are passing. Let's summarize what we've done:
 
@@ -1682,6 +1654,7 @@ I'll review the changes we've made and suggest additional improvements to clean 
 ## Review of Changes Made
 
 1. **Added Task Object Support**:
+
    - Added `id` field to the `Task` Pydantic model
    - Updated `_get_tasks_with_filter` to include task IDs
    - Created new methods that accept Task objects:
@@ -1691,6 +1664,7 @@ I'll review the changes we've made and suggest additional improvements to clean 
      - `complete(task: Task)`
 
 2. **Updated Commands**:
+
    - `test_update` - Now uses Task objects
    - `test_complete` - Now uses Task objects
    - `test_append_pydantic` - Uses Task objects
@@ -1710,112 +1684,110 @@ There's inconsistency in method naming. Some methods have `task_` prefix while o
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
           self.update_task_note(task.id, note)
-  
+
 -     def append_task_note(self, task_id: str, note_text: str) -> None:
 +     def append_note(self, task_id: str, note_text: str) -> None:
           """Append text to a task's existing note by ID.
-          
+
               raise ValueError("Task must be a dictionary with an 'id' field")
-              
+
 -         return self.append_task_note(task['id'], note_text)
 +         return self.append_note(task['id'], note_text)
-  
+
       def append_to_task(self, task: Task, note_text: str) -> None:
               raise ValueError("Task must have an id field")
-              
+
 -         return self.append_task_note(task.id, note_text)
 +         return self.append_note(task.id, note_text)
-  
+
       def get_inbox_tasks(self) -> List[Task]:
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Now let's update the tests to use the renamed method:
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let me try a more specific edit:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
-  
-  
+
+
 - def test_append_task_note(manager, mock_system):
 + def test_append_note(manager, mock_system):
       """Test appending text to a task's note."""
       # Test successful note append
       mock_system.run_javascript.return_value = "Note appended successfully"
-      
+
 -     result = manager.append_task_note(task_id, note_text)
 +     result = manager.append_note(task_id, note_text)
       assert result == "Note appended successfully"
-      
+
       mock_system.reset_mock()
       note_with_quotes = 'Note with "quotes"'
 -     manager.append_task_note(task_id, note_with_quotes)
 +     manager.append_note(task_id, note_with_quotes)
       js_call = mock_system.run_javascript.call_args[0][0]
       assert 'Note with \\"quotes\\"' in js_call
-      
+
       with pytest.raises(Exception, match="Task not found"):
 -         manager.append_task_note(task_id, note_text)
 +         manager.append_note(task_id, note_text)
-  
-  
+
+
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ### 2. Rename `update_task_name` to `update_name` for Consistency
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
           return json.loads(result)
-  
+
 -     def update_task_name(self, task_id: str, new_name: str) -> None:
 +     def update_name(self, task_id: str, new_name: str) -> None:
           """Update a task's name by ID."""
           update_script = f"""
               raise ValueError("Task must have an id field")
-              
+
 -         self.update_task_name(task.id, new_name)
 +         self.update_name(task.id, new_name)
-  
+
       def update_task_note(self, task_id: str, note: str) -> None:
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Now let's update the references to `update_task_name` in the rest of the code:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 <details>
             <summary>Grep search for "update_task_name" • **5** files</summary>
@@ -1847,43 +1819,41 @@ _****_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let's update the tests:
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let's check the fixup_url command to see if it still uses update_task_name:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: omnifocus.py
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: omnifocus.py
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: omnifocus.py
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Great! The `fixup_url` command is already using the new `update_task` and `update_note` methods.
 
@@ -1891,82 +1861,78 @@ Great! The `fixup_url` command is already using the new `update_task` and `updat
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let me try a more specific edit:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
           return [Task.model_validate(task) for task in tasks_data]
-  
+
 -     def complete_task(self, task_id: str) -> str:
 +     def complete_by_id(self, task_id: str) -> str:
           """Complete a task by its ID.
-          
+
               raise ValueError("Task must have an id field")
-              
+
 -         return self.complete_task(task.id)
 +         return self.complete_by_id(task.id)
-  
+
       def delete_untitled_tags(self) -> int:
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Now let's update the tests:
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let me try a more specific edit:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
-  
-  
+
+
 - def test_complete_task(manager, mock_system):
 + def test_complete_by_id(manager, mock_system):
       """Test completing a task by ID."""
       # Test successful task completion
       task_id = "ABC123"
       mock_system.run_javascript.return_value = "Task completed successfully"
-      
+
 -     result = manager.complete_task(task_id)
 +     result = manager.complete_by_id(task_id)
       assert result == "Task completed successfully"
-      
+
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let's check if there are any other references to `complete_task` in the code:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 <details>
             <summary>Grep search for "complete_task" • **8** files</summary>
@@ -2029,31 +1995,31 @@ _****_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let's update the `test_complete` command:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: omnifocus.py
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: omnifocus.py
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let's find the `test_complete` command:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 <details>
             <summary>Grep search for "def test_complete" • **5** files</summary>
@@ -2072,13 +2038,13 @@ _****_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: omnifocus.py
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Great! The `test_complete` command is already using the new `complete` method with a Task object.
 
@@ -2088,23 +2054,21 @@ Currently, `get_incomplete_tasks` returns a list of dictionaries, while other me
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let me try a more specific edit:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
           self.system.open_url(url)
-  
+
 -     def get_incomplete_tasks(self) -> List[dict]:
 +     def get_incomplete_tasks(self) -> List[Task]:
           """Get all incomplete tasks with their IDs, names and notes."""
@@ -2119,43 +2083,43 @@ _****_
 +                     due_date: task.dueDate() ? task.dueDate().toISOString() : null,
 +                     creation_date: task.creationDate() ? task.creationDate().toISOString() : null
                   }));
-  
+
           """
           result = self.system.run_javascript(javascript)
 -         return json.loads(result)
 +         tasks_data = json.loads(result)
 +         return [Task.model_validate(task) for task in tasks_data]
-  
+
       def update_name(self, task_id: str, new_name: str) -> None:
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Now let's update the `test_append` command to use Task objects:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: omnifocus.py
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: omnifocus.py
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let's find the `test_append` command:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 <details>
             <summary>Grep search for "def test_append" • **4** files</summary>
@@ -2177,19 +2141,19 @@ _****_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: omnifocus.py
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let's update the `test_append` command to use Task objects:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
       # Get the task ID
@@ -2200,14 +2164,14 @@ _****_
 -             test_task = task
 -             break
 +     test_task = next((task for task in tasks if task.name == test_name), None)
-      
+
       if test_task:
           # Append to the task note
           append_text = f"Appended at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
           print(f"Appending to task '{test_name}' note: '{append_text}'")
 -         print(f"Original note: '{test_task['note']}'")
 +         print(f"Original note: '{test_task.note}'")
-          
+
           # Use the new append_to_task method
           updated_tasks = manager.get_incomplete_tasks()
           for task in updated_tasks:
@@ -2221,7 +2185,7 @@ _****_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ### 5. Run the Tests to Verify All Changes
 
@@ -2229,7 +2193,7 @@ Let's run the tests to make sure all our changes work correctly:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```bash
 cd $HOME/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py -v
@@ -2243,7 +2207,7 @@ platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- $HOME/gits/omnif
 cachedir: .pytest_cache
 rootdir: $HOME/gits/omnifocus_cli
 configfile: pyproject.toml
-collected 24 items                                                                                         
+collected 24 items
 
 tests/unit/test_omnifocus.py::test_sanitize_task_text PASSED                                         [  4%]
 tests/unit/test_omnifocus.py::test_extract_tags_from_task PASSED                                     [  8%]
@@ -2281,20 +2245,20 @@ mock_system = <MagicMock spec='OSXSystem' id='4400185072'>
         # Test successful task completion
         task_id = "ABC123"
         mock_system.run_javascript.return_value = "Task completed successfully"
-    
+
         result = manager.complete_by_id(task_id)
         assert result == "Task completed successfully"
-    
+
         # Verify the JavaScript was called with correct parameters
         mock_system.run_javascript.assert_called_once()
         js_call = mock_system.run_javascript.call_args[0][0]
         assert f'id: "{task_id}"' in js_call
         assert "task.markComplete()" in js_call
-    
+
         # Test task not found
         mock_system.reset_mock()
         mock_system.run_javascript.side_effect = Exception("Task not found")
-    
+
         with pytest.raises(Exception, match="Task not found"):
 >           manager.complete_task(task_id)
 E           AttributeError: 'OmniFocusManager' object has no attribute 'complete_task'. Did you mean: 'compl
@@ -2312,20 +2276,20 @@ mock_system = <MagicMock spec='OSXSystem' id='4400185072'>
         # Test successful task completion
         task_id = "ABC123"
         mock_system.run_javascript.return_value = "Task completed successfully"
-    
+
         result = manager.complete_by_id(task_id)
         assert result == "Task completed successfully"
-    
+
         # Verify the JavaScript was called with correct parameters
         mock_system.run_javascript.assert_called_once()
         js_call = mock_system.run_javascript.call_args[0][0]
         assert f'id: "{task_id}"' in js_call
         assert "task.markComplete()" in js_call
-    
+
         # Test task not found
         mock_system.reset_mock()
         mock_system.run_javascript.side_effect = Exception("Task not found")
-    
+
 >       with pytest.raises(Exception, match="Task not found"):
 E       AssertionError: Regex pattern did not match.
 E        Regex: 'Task not found'
@@ -2345,22 +2309,22 @@ mock_system = <MagicMock spec='OSXSystem' id='4400271424'>
             'name': 'Test Task',
             'note': 'Original note'
         }
-    
+
         note_text = "Additional information"
         mock_system.run_javascript.return_value = "Note appended successfully"
-    
+
         # Test successful append
 >       result = manager.append_to_task(task, note_text)
 
-tests/unit/test_omnifocus.py:290: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/unit/test_omnifocus.py:290:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 self = <omnifocus.OmniFocusManager object at 0x10646cf80>
 task = {'id': 'ABC123', 'name': 'Test Task', 'note': 'Original note'}, note_text = 'Additional information'
 
     def append_to_task(self, task: Task, note_text: str) -> None:
         """Append text to a task's existing note using a Task object.
-    
+
         Args:
             task: A Task object with an id field
             note_text: The text to append to the task's note
@@ -2396,19 +2360,19 @@ mock_requests = <MagicMock name='requests' id='4400507568'>
                 "note": "Source: https://example.org"
             }
         ]
-    
+
         # Mock webpage responses
         mock_response1 = MagicMock()
         mock_response1.text = "<html><head><title>Example Website</title></head></html>"
         mock_response2 = MagicMock()
         mock_response2.text = "<html><head><title>Example Org</title></head></html>"
-    
+
         mock_requests.get.side_effect = [mock_response1, mock_response2]
-    
+
         # Run the command
         result = runner.invoke(app, ["fixup-url"])
         assert result.exit_code == 0
-    
+
         # Verify output
 >       assert "Found 2 tasks to update" in result.stdout
 E       AssertionError: assert 'Found 2 tasks to update' in 'No tasks found that need URL fixup\n'
@@ -2437,11 +2401,11 @@ mock_requests = <MagicMock name='requests' id='4401674096'>
                 "note": "Source: https://error.com"
             }
         ]
-    
+
         # Mock responses - one success, one failure
         mock_response = MagicMock()
         mock_response.text = "<html><head><title>Example Website</title></head></html>"
-    
+
         class MockRequestException(Exception):
             pass
         mock_requests.exceptions.RequestException = MockRequestException
@@ -2449,11 +2413,11 @@ mock_requests = <MagicMock name='requests' id='4401674096'>
             mock_response,  # First URL succeeds
             MockRequestException("Network error"),  # Second URL fails
         ]
-    
+
         # Run the command
         result = runner.invoke(app, ["fixup-url"])
         assert result.exit_code == 0
-    
+
         # Verify output
 >       assert "Found 2 tasks to update" in result.stdout
 E       AssertionError: assert 'Found 2 tasks to update' in 'No tasks found that need URL fixup\n'
@@ -2487,19 +2451,19 @@ mock_requests = <MagicMock name='requests' id='4401453712'>
                 "note": ""
             }
         ]
-    
+
         # Mock webpage responses
         mock_response1 = MagicMock()
         mock_response1.text = "<html><head><title>Example Website</title></head></html>"
         mock_response2 = MagicMock()
         mock_response2.text = "<html><head><title>Example Org</title></head></html>"
-    
+
         mock_requests.get.side_effect = [mock_response1, mock_response2]
-    
+
         # Run the command
         result = runner.invoke(app, ["fixup-url"])
         assert result.exit_code == 0
-    
+
         # Verify output
 >       assert "Found 2 tasks to update" in result.stdout
 E       AssertionError: assert 'Found 2 tasks to update' in 'No tasks found that need URL fixup\n'
@@ -2523,16 +2487,16 @@ mock_requests = <MagicMock name='requests' id='4401671264'>
                 "note": ""
             }
         ]
-    
+
         # Mock webpage response
         mock_response = MagicMock()
         mock_response.text = "<html><head><title>Example Website</title></head></html>"
         mock_requests.get.return_value = mock_response
-    
+
         # Run the command
         result = runner.invoke(app, ["fixup-url"])
         assert result.exit_code == 0
-    
+
         # Verify output
 >       assert "Found 1 tasks to update" in result.stdout
 E       AssertionError: assert 'Found 1 tasks to update' in 'No tasks found that need URL fixup\n'
@@ -2556,16 +2520,16 @@ mock_requests = <MagicMock name='requests' id='4400509824'>
                 "note": "Source: https://example.org"
             }
         ]
-    
+
         # Mock webpage response
         mock_response = MagicMock()
         mock_response.text = "<html><head><title>Example Org</title></head></html>"
         mock_requests.get.return_value = mock_response
-    
+
         # Run the command
         result = runner.invoke(app, ["fixup-url"])
         assert result.exit_code == 0
-    
+
         # Verify output
 >       assert "Found 1 tasks to update" in result.stdout
 E       AssertionError: assert 'Found 1 tasks to update' in 'No tasks found that need URL fixup\n'
@@ -2589,14 +2553,14 @@ mock_requests = <MagicMock name='requests' id='4400699952'>
                 "note": ""
             }
         ]
-    
+
         # Mock update_task_note to fail with a proper Exception
         mock_manager.update_task_note.side_effect = RuntimeError("Failed to update note")
-    
+
         # Run the command
         result = runner.invoke(app, ["fixup-url"])
         assert result.exit_code == 0
-    
+
         # Verify error output
 >       assert "Found 1 tasks to update" in result.stdout
 E       AssertionError: assert 'Found 1 tasks to update' in 'No tasks found that need URL fixup\n'
@@ -2629,15 +2593,13 @@ s to update' in 'No tasks found that need URL fixup\n'
  +  where 'No tasks found that need URL fixup\n' = <Result okay>.stdout
 ======================================= 8 failed, 16 passed in 0.35s =======================================
 
-igors-Mac-mini in omnifocus_cli on  main [$!] via 🐍 v3.13.0 (omnifocus_cli) on ☁️   
+igors-Mac-mini in omnifocus_cli on  main [$!] via 🐍 v3.13.0 (omnifocus_cli) on ☁️
 ❯
 ```
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 We need to fix a few issues:
 
@@ -2649,68 +2611,64 @@ Let's fix these issues one by one:
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let me try a more specific edit:
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let me try a different approach:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: tests/unit/test_omnifocus.py
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
-      
+
       with pytest.raises(Exception, match="Task not found"):
 -         manager.complete_task(task_id)
 +         manager.complete_by_id(task_id)
-  
-  
+
+
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Now let's fix the `test_append_to_task` function:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: tests/unit/test_omnifocus.py
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let's update the `append_to_task` method to handle both dict and Task objects:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
   from enum import Enum
@@ -2720,12 +2678,12 @@ _****_
   from datetime import datetime
   import requests
           return self.append_note(task['id'], note_text)
-  
+
 -     def append_to_task(self, task: Task, note_text: str) -> None:
 -         """Append text to a task's existing note using a Task object.
 +     def append_to_task(self, task: Union[dict, Task], note_text: str) -> None:
 +         """Append text to a task's existing note using a task object.
-          
+
           Args:
 -             task: A Task object with an id field
 +             task: A Task object or dictionary with an id field
@@ -2741,62 +2699,56 @@ _****_
 +             task_id = task.id
 +         else:
 +             raise ValueError("Task must be a Task object or dictionary with an 'id' field")
-              
+
 -         return self.append_note(task.id, note_text)
 +         return self.append_note(task_id, note_text)
-  
+
       def get_inbox_tasks(self) -> List[Task]:
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Now let's fix the `fixup_url` tests. We need to update the mock for `get_incomplete_tasks` to return Task objects:
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let me try a more specific edit:
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let's try a different approach. Let's update the `fixup_url` command to handle both Task objects and dictionaries:
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let's try a different approach. Let's update the tests to use the new method names:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
       ])
-  
+
 -     # Verify task updates
 +     # Verify the correct calls were made
       mock_manager.update_task_name.assert_has_calls([
@@ -2805,25 +2757,23 @@ _****_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let's update all the tests to use the new method names:
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let's try a different approach. Let's update the `fixup_url` tests to use the new method names:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 <details>
             <summary>Grep search for "update_task_name.assert" • **4** files</summary>
@@ -2852,38 +2802,38 @@ _****_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let's update the mock in the tests:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
       # Verify output
       assert "Found 2 tasks to update" in result.stdout
 -     assert "Updated task with title: Example Website" in result.stdout
 -     assert "Updated task with title: Example Org" in result.stdout
-- 
+-
 -     # Verify URL requests
 -     mock_requests.get.assert_has_calls([
 -         call("https://example.com", headers={'User-Agent': 'Mozilla/5.0'}),
 -         call("https://example.org", headers={'User-Agent': 'Mozilla/5.0'}),
 -     ])
-  
+
       # Verify the correct calls were made
 -     mock_manager.update_task_name.assert_has_calls([
 +     mock_manager.update_name.assert_has_calls([
           call("task1", "Example Website"),
           call("task3", "Example Org")
-  
+
       # Verify only one task was updated
 -     mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")
 +     mock_manager.update_name.assert_called_once_with("task1", "Example Website")
-  
-  
-  
+
+
+
       # Verify task updates
 -     mock_manager.update_task_name.assert_has_calls([
 +     mock_manager.update_name.assert_has_calls([
@@ -2893,69 +2843,69 @@ _****_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let's update the remaining tests:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
-  
+
       # Verify only one task was updated
 -     mock_manager.update_name.assert_called_once_with("task1", "Example Website")
 +     mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")
-  
-  
+
+
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let me try a more specific edit:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
-  
+
       # Verify only one task was updated
 -     mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")
 +     mock_manager.update_name.assert_called_once_with("task1", "Example Website")
-  
-  
+
+
       # Verify the order of operations - note should be updated before title
       mock_manager.update_task_note.assert_called_once_with("task1", "Source: https://example.com")
 -     mock_manager.update_task_name.assert_called_once_with("task1", "Example Website")
 +     mock_manager.update_name.assert_called_once_with("task1", "Example Website")
-  
+
       # Verify URL request
       # Verify only title was updated, note wasn't touched
       mock_manager.update_task_note.assert_not_called()
 -     mock_manager.update_task_name.assert_called_once_with("task1", "Example Org")
 +     mock_manager.update_name.assert_called_once_with("task1", "Example Org")
-  
+
       # Verify URL request
-  
+
       # Verify title wasn't updated after note update failed
 -     mock_manager.update_task_name.assert_not_called()
 +     mock_manager.update_name.assert_not_called()
       mock_requests.get.assert_not_called()
-  
+
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let's also update the `update_task_note` references:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 <details>
             <summary>Grep search for "update_task_note" • **5** files</summary>
@@ -2997,43 +2947,37 @@ _****_
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let me try a more specific edit:
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let's try a different approach. Let's update the `fixup_url` command to use the new method names:
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let's run the tests again to see what's still failing:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```bash
 cd $HOME/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py::test_append_to_task -v
@@ -3049,7 +2993,7 @@ platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- $HOME/gits/omnif
 cachedir: .pytest_cache
 rootdir: $HOME/gits/omnifocus_cli
 configfile: pyproject.toml
-collected 1 item                                                                                           
+collected 1 item
 
 tests/unit/test_omnifocus.py::test_append_to_task FAILED                                             [100%]
 
@@ -3067,32 +3011,32 @@ mock_system = <MagicMock spec='OSXSystem' id='4379922160'>
             'name': 'Test Task',
             'note': 'Original note'
         }
-    
+
         note_text = "Additional information"
         mock_system.run_javascript.return_value = "Note appended successfully"
-    
+
         # Test successful append
         result = manager.append_to_task(task, note_text)
         assert result == "Note appended successfully"
-    
+
         # Verify the JavaScript was called with correct parameters
         mock_system.run_javascript.assert_called_once()
         js_call = mock_system.run_javascript.call_args[0][0]
         assert f'id: "{task["id"]}"' in js_call
-    
+
         # Test with invalid task object
         with pytest.raises(ValueError, match="Task must be a dictionary with an 'id' field"):
 >           manager.append_to_task("not a dictionary", note_text)
 
-tests/unit/test_omnifocus.py:300: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/unit/test_omnifocus.py:300:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 self = <omnifocus.OmniFocusManager object at 0x104aa8a70>, task = 'not a dictionary'
 note_text = 'Additional information'
 
     def append_to_task(self, task: Union[dict, Task], note_text: str) -> None:
         """Append text to a task's existing note using a task object.
-    
+
         Args:
             task: A Task object or dictionary with an id field
             note_text: The text to append to the task's note
@@ -3124,19 +3068,19 @@ mock_system = <MagicMock spec='OSXSystem' id='4379922160'>
             'name': 'Test Task',
             'note': 'Original note'
         }
-    
+
         note_text = "Additional information"
         mock_system.run_javascript.return_value = "Note appended successfully"
-    
+
         # Test successful append
         result = manager.append_to_task(task, note_text)
         assert result == "Note appended successfully"
-    
+
         # Verify the JavaScript was called with correct parameters
         mock_system.run_javascript.assert_called_once()
         js_call = mock_system.run_javascript.call_args[0][0]
         assert f'id: "{task["id"]}"' in js_call
-    
+
         # Test with invalid task object
 >       with pytest.raises(ValueError, match="Task must be a dictionary with an 'id' field"):
 E       AssertionError: Regex pattern did not match.
@@ -3150,54 +3094,52 @@ FAILED tests/unit/test_omnifocus.py::test_append_to_task - AssertionError: Regex
  Input: "Task must be a Task object or dictionary with an 'id' field"
 ============================================ 1 failed in 0.27s =============================================
 
-igors-Mac-mini in omnifocus_cli on  main [$!] via 🐍 v3.13.0 (omnifocus_cli) on ☁️   
+igors-Mac-mini in omnifocus_cli on  main [$!] via 🐍 v3.13.0 (omnifocus_cli) on ☁️
 ❯
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let's update the test to match the new error message:
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let me try a more specific edit:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
-      
+
       # Test with invalid task object
 -     with pytest.raises(ValueError, match="Task must be a dictionary with an 'id' field"):
 +     with pytest.raises(ValueError, match="Task must be a Task object or dictionary with an 'id' field"):
           manager.append_to_task("not a dictionary", note_text)
-      
+
 -     with pytest.raises(ValueError, match="Task must be a dictionary with an 'id' field"):
 +     with pytest.raises(ValueError, match="Task dictionary must have an 'id' field"):
           manager.append_to_task({}, note_text)
-  
+
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Let's run the tests again:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```bash
 cd $HOME/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py::test_append_to_task -v
@@ -3213,25 +3155,25 @@ platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- $HOME/gits/omnif
 cachedir: .pytest_cache
 rootdir: $HOME/gits/omnifocus_cli
 configfile: pyproject.toml
-collected 1 item                                                                                           
+collected 1 item
 
 tests/unit/test_omnifocus.py::test_append_to_task PASSED                                             [100%]
 
 ============================================ 1 passed in 0.19s =============================================
 
-igors-Mac-mini in omnifocus_cli on  main [$!] via 🐍 v3.13.0 (omnifocus_cli) on ☁️   
+igors-Mac-mini in omnifocus_cli on  main [$!] via 🐍 v3.13.0 (omnifocus_cli) on ☁️
 ❯
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Great! Let's run all the tests:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```bash
 cd $HOME/gits/omnifocus_cli && python -m pytest tests/unit/test_omnifocus.py -v
@@ -3245,7 +3187,7 @@ platform darwin -- Python 3.12.7, pytest-8.3.4, pluggy-1.5.0 -- $HOME/gits/omnif
 cachedir: .pytest_cache
 rootdir: $HOME/gits/omnifocus_cli
 configfile: pyproject.toml
-collected 24 items                                                                                         
+collected 24 items
 
 tests/unit/test_omnifocus.py::test_sanitize_task_text PASSED                                         [  4%]
 tests/unit/test_omnifocus.py::test_extract_tags_from_task PASSED                                     [  8%]
@@ -3300,19 +3242,19 @@ mock_requests = <MagicMock name='requests' id='4360249488'>
                 "note": "Source: https://example.org"
             }
         ]
-    
+
         # Mock webpage responses
         mock_response1 = MagicMock()
         mock_response1.text = "<html><head><title>Example Website</title></head></html>"
         mock_response2 = MagicMock()
         mock_response2.text = "<html><head><title>Example Org</title></head></html>"
-    
+
         mock_requests.get.side_effect = [mock_response1, mock_response2]
-    
+
         # Run the command
         result = runner.invoke(app, ["fixup-url"])
         assert result.exit_code == 0
-    
+
         # Verify output
 >       assert "Found 2 tasks to update" in result.stdout
 E       AssertionError: assert 'Found 2 tasks to update' in 'No tasks found that need URL fixup\n'
@@ -3341,11 +3283,11 @@ mock_requests = <MagicMock name='requests' id='4360072336'>
                 "note": "Source: https://error.com"
             }
         ]
-    
+
         # Mock responses - one success, one failure
         mock_response = MagicMock()
         mock_response.text = "<html><head><title>Example Website</title></head></html>"
-    
+
         class MockRequestException(Exception):
             pass
         mock_requests.exceptions.RequestException = MockRequestException
@@ -3353,11 +3295,11 @@ mock_requests = <MagicMock name='requests' id='4360072336'>
             mock_response,  # First URL succeeds
             MockRequestException("Network error"),  # Second URL fails
         ]
-    
+
         # Run the command
         result = runner.invoke(app, ["fixup-url"])
         assert result.exit_code == 0
-    
+
         # Verify output
 >       assert "Found 2 tasks to update" in result.stdout
 E       AssertionError: assert 'Found 2 tasks to update' in 'No tasks found that need URL fixup\n'
@@ -3391,19 +3333,19 @@ mock_requests = <MagicMock name='requests' id='4359876496'>
                 "note": ""
             }
         ]
-    
+
         # Mock webpage responses
         mock_response1 = MagicMock()
         mock_response1.text = "<html><head><title>Example Website</title></head></html>"
         mock_response2 = MagicMock()
         mock_response2.text = "<html><head><title>Example Org</title></head></html>"
-    
+
         mock_requests.get.side_effect = [mock_response1, mock_response2]
-    
+
         # Run the command
         result = runner.invoke(app, ["fixup-url"])
         assert result.exit_code == 0
-    
+
         # Verify output
 >       assert "Found 2 tasks to update" in result.stdout
 E       AssertionError: assert 'Found 2 tasks to update' in 'No tasks found that need URL fixup\n'
@@ -3427,16 +3369,16 @@ mock_requests = <MagicMock name='requests' id='4359692912'>
                 "note": ""
             }
         ]
-    
+
         # Mock webpage response
         mock_response = MagicMock()
         mock_response.text = "<html><head><title>Example Website</title></head></html>"
         mock_requests.get.return_value = mock_response
-    
+
         # Run the command
         result = runner.invoke(app, ["fixup-url"])
         assert result.exit_code == 0
-    
+
         # Verify output
 >       assert "Found 1 tasks to update" in result.stdout
 E       AssertionError: assert 'Found 1 tasks to update' in 'No tasks found that need URL fixup\n'
@@ -3460,16 +3402,16 @@ mock_requests = <MagicMock name='requests' id='4360753264'>
                 "note": "Source: https://example.org"
             }
         ]
-    
+
         # Mock webpage response
         mock_response = MagicMock()
         mock_response.text = "<html><head><title>Example Org</title></head></html>"
         mock_requests.get.return_value = mock_response
-    
+
         # Run the command
         result = runner.invoke(app, ["fixup-url"])
         assert result.exit_code == 0
-    
+
         # Verify output
 >       assert "Found 1 tasks to update" in result.stdout
 E       AssertionError: assert 'Found 1 tasks to update' in 'No tasks found that need URL fixup\n'
@@ -3493,14 +3435,14 @@ mock_requests = <MagicMock name='requests' id='4360774976'>
                 "note": ""
             }
         ]
-    
+
         # Mock update_task_note to fail with a proper Exception
         mock_manager.update_task_note.side_effect = RuntimeError("Failed to update note")
-    
+
         # Run the command
         result = runner.invoke(app, ["fixup-url"])
         assert result.exit_code == 0
-    
+
         # Verify error output
 >       assert "Found 1 tasks to update" in result.stdout
 E       AssertionError: assert 'Found 1 tasks to update' in 'No tasks found that need URL fixup\n'
@@ -3528,33 +3470,31 @@ s to update' in 'No tasks found that need URL fixup\n'
  +  where 'No tasks found that need URL fixup\n' = <Result okay>.stdout
 ======================================= 6 failed, 18 passed in 0.23s =======================================
 
-igors-Mac-mini in omnifocus_cli on  main [$!] via 🐍 v3.13.0 (omnifocus_cli) on ☁️   
+igors-Mac-mini in omnifocus_cli on  main [$!] via 🐍 v3.13.0 (omnifocus_cli) on ☁️
 ❯
 ```
 
 ---
 
-_****_
+_\*\*\*\*_
 
 We still have issues with the `fixup_url` tests. Let's update the `fixup_url` command to handle both Task objects and dictionaries:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Cancelled
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
 _**User**_
 
-OK, something is wrong, focus on Omnifcocusmanager, should the only entrypoints be with Task Objects? 
+OK, something is wrong, focus on Omnifcocusmanager, should the only entrypoints be with Task Objects?
 
 ---
 
@@ -3660,25 +3600,30 @@ _**Assistant**_
 We're refactoring the Omnifocus CLI codebase to improve its design and maintainability with these key changes:
 
 ## 1. Task Object-Centric API
+
 - Converting the OmniFocusManager API to primarily use Task objects instead of raw task IDs
 - Making all ID-based methods private (with underscore prefix)
 - Providing clean public methods that only accept Task objects
 
 ## 2. Consistent Method Naming
+
 - Standardizing method names across the codebase
 - Renamed methods for clarity: `update_task_name` → `update_name`, `complete_task` → `complete`, etc.
 
 ## 3. Type Safety Improvements
+
 - Added `id` field to the Task Pydantic model
 - Updated methods to properly validate Task objects
 - Improved error handling for missing IDs
 
 ## 4. Refactored Commands
+
 - Updated CLI commands to use the new Task-based API
 - Improved the `fixup_url` command to work with Task objects
 - Made `test_complete`, `test_update`, and other test commands use Task objects
 
 ## 5. Updated Tests
+
 - Fixed tests to match the new API
 - Added tests for the new Task-based methods
 
@@ -3686,7 +3631,4 @@ The goal is to create a more consistent, type-safe API where all public methods 
 
 ---
 
-
-
 ---
-

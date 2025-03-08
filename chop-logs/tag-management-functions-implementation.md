@@ -14,28 +14,26 @@ I'll help you add these functions. First, let me check the existing codebase to 
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: omnifocus.py
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 Now I'll add the two new functions to list all tags and erase "Untitled Tag" tags. I'll add these functions to the `OmniFocusManager` class.
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
           return self.system.run_javascript(javascript)
-  
+
 +     def get_all_tags(self) -> List[str]:
 +         """Get all tags from OmniFocus.
-+         
++
 +         Returns:
 +             List[str]: List of all tag names in OmniFocus
 +         """
@@ -43,20 +41,20 @@ _****_
 +             function run() {
 +                 const of = Application('OmniFocus');
 +                 of.includeStandardAdditions = true;
-+ 
++
 +                 const doc = of.defaultDocument;
 +                 const tags = doc.flattenedTags();
-+                 
++
 +                 const tagNames = tags.map(tag => tag.name());
 +                 return JSON.stringify(tagNames);
 +             }
 +         """
 +         result = self.system.run_javascript(javascript)
 +         return json.loads(result)
-+ 
++
 +     def delete_untitled_tags(self) -> int:
 +         """Delete all tags titled 'Untitled Tag'.
-+         
++
 +         Returns:
 +             int: Number of tags deleted
 +         """
@@ -64,41 +62,39 @@ _****_
 +             function run() {
 +                 const of = Application('OmniFocus');
 +                 of.includeStandardAdditions = true;
-+ 
++
 +                 const doc = of.defaultDocument;
 +                 const untitledTags = doc.flattenedTags.whose({name: 'Untitled Tag'})();
 +                 const count = untitledTags.length;
-+                 
++
 +                 untitledTags.forEach(tag => {
 +                     tag.delete();
 +                 });
-+                 
++
 +                 return count;
 +             }
 +         """
 +         result = self.system.run_javascript(javascript)
 +         return int(result)
-+ 
-  
++
+
   def sanitize_task_text(task: str) -> str:
 ```
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 Now I'll add CLI commands to expose these new functions to the user. I'll add them to the bottom of the file with the other commands.
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
           return
-  
-+ 
+
++
 + @app.command(name="list-tags")
 + def list_tags():
 +     """List all tags in OmniFocus."""
@@ -107,7 +103,7 @@ _****_
 +     tags = manager.get_all_tags()
 +     for tag in sorted(tags):
 +         typer.echo(tag)
-+ 
++
 + @app.command(name="cleanup-tags")
 + def cleanup_tags():
 +     """Delete all 'Untitled Tag' tags from OmniFocus."""
@@ -118,16 +114,14 @@ _****_
 +         typer.echo("No untitled tags found.")
 +     else:
 +         typer.echo(f"Deleted {count} untitled tag{'s' if count > 1 else ''}.")
-+ 
-  
++
+
   if __name__ == "__main__":
 ```
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 I've added two new features to your OmniFocus CLI:
 
@@ -157,27 +151,27 @@ I'll modify the code to handle both "Untitled Tag" and blank/empty tag names. Le
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
-  
+
       def delete_untitled_tags(self) -> int:
 -         """Delete all tags titled 'Untitled Tag'.
 +         """Delete all tags titled 'Untitled Tag' or with empty names.
-          
+
           Returns:
-  
+
                   const doc = of.defaultDocument;
 +                 const emptyTags = doc.flattenedTags.whose({name: ''})();
                   const untitledTags = doc.flattenedTags.whose({name: 'Untitled Tag'})();
 -                 const count = untitledTags.length;
-+                 
++
 +                 const count = emptyTags.length + untitledTags.length;
-+                 
++
 +                 emptyTags.forEach(tag => {
 +                     tag.delete();
 +                 });
-                  
+
                   untitledTags.forEach(tag => {
   @app.command(name="cleanup-tags")
   def cleanup_tags():
@@ -192,21 +186,21 @@ _****_
       else:
 -         typer.echo(f"Deleted {count} untitled tag{'s' if count > 1 else ''}.")
 +         typer.echo(f"Deleted {count} empty/untitled tag{'s' if count > 1 else ''}.")
-  
-  
+
+
 ```
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 I've updated the code to handle both cases:
+
 1. Tags with empty names (blank titles)
 2. Tags named "Untitled Tag"
 
 The `delete_untitled_tags` method now:
+
 - Finds tags with empty names using `name: ''`
 - Finds tags named "Untitled Tag"
 - Deletes both types of tags
@@ -215,6 +209,7 @@ The `delete_untitled_tags` method now:
 The CLI command's messages have been updated to reflect that it handles both empty and untitled tags.
 
 You can run the cleanup command the same way:
+
 ```bash
 python omnifocus.py cleanup-tags
 ```
@@ -223,7 +218,4 @@ Would you like me to make any other changes to how this handles empty or untitle
 
 ---
 
-
-
 ---
-

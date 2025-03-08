@@ -14,56 +14,45 @@ I'll help you add `.specstory` to the ignore files. First, let me check if there
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 Great, I found the `.gitignore` file. Let me check its current contents before making changes.
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: .gitignore
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 Now I'll add `.specstory` to the `.gitignore` file. I'll add it in a new section specifically for SpecStory:
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
-  ENV/ 
+  ENV/
   .aider*
-+ 
++
 + # SpecStory
 + .specstory/
-  
+
 ```
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 I've added `.specstory/` to your `.gitignore` file in a new section. The changes have been applied successfully. Now Git will ignore the `.specstory` directory and its contents. Is there anything else you need help with?
 
 ---
 
-
-
 ---
-

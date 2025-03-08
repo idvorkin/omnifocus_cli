@@ -4,7 +4,7 @@
 
 _**User**_
 
-Should the javascript commands be in omnifcous or should they be in the OMnifocus humble object? 
+Should the javascript commands be in omnifcous or should they be in the OMnifocus humble object?
 
 ---
 
@@ -14,7 +14,7 @@ Let me search through the codebase to understand the current structure and conte
 
 ---
 
-_****_
+_\*\*\*\*_
 
 <details>
             <summary>Searched codebase "javascript commands omnifocus humble object" • **25** results</summary>
@@ -51,27 +51,24 @@ _****_
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 Let me read more about the current implementation to understand the structure better.
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: omnifocus.py
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 Based on the codebase analysis, I can provide a clear recommendation about where the JavaScript commands should be located. The current architecture follows the Humble Object pattern, which is a good design choice. Here's why:
 
 1. The current structure has:
+
    - `OSXSystem` class: A humble object that handles low-level system operations, including running JavaScript commands via `osascript`
    - `OmniFocusManager` class: The high-level manager that contains the business logic and uses the humble object for system operations
 
@@ -82,10 +79,12 @@ Based on the codebase analysis, I can provide a clear recommendation about where
 This is the correct approach because:
 
 1. **Separation of Concerns**:
+
    - The humble object (`OSXSystem`) only handles the mechanics of running JavaScript commands
    - The business logic and actual JavaScript commands live in `OmniFocusManager` where they can be properly organized with the related task management logic
 
 2. **Testability**:
+
    - The current structure allows for easy mocking of the `OSXSystem` for testing
    - The JavaScript commands can be tested through the `OmniFocusManager` without actually executing them
    - This is evidenced by the test file which successfully mocks the system operations
@@ -96,6 +95,7 @@ This is the correct approach because:
    - The JavaScript commands themselves are organized by feature (tasks, projects, etc.)
 
 Therefore, the current structure should be maintained:
+
 - Keep the JavaScript execution mechanism in the `OSXSystem` humble object
 - Keep the actual JavaScript commands in the `OmniFocusManager` where they are part of the business logic
 - Continue using the humble object pattern to separate the system-level operations from the business logic
@@ -106,7 +106,7 @@ This structure provides the best balance of separation of concerns, testability,
 
 _**User**_
 
-Great does the codebase adhere to this? 
+Great does the codebase adhere to this?
 
 ---
 
@@ -116,7 +116,7 @@ Let me analyze the codebase more thoroughly to check if it consistently follows 
 
 ---
 
-_****_
+_\*\*\*\*_
 
 <details>
             <summary>Grep search for "function run\(\)" • **1** files</summary>
@@ -132,27 +132,24 @@ _****_
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 Let me check each of these JavaScript function occurrences to verify they're in the right place.
 
 ---
 
-_****_
+_\*\*\*\*_
 
 Read file: omnifocus.py
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 After analyzing the codebase, I've found that it mostly adheres to the pattern, but there is one inconsistency. Let me break down where the JavaScript commands appear:
 
 1. ✅ **Properly Placed JavaScript (in OmniFocusManager)**:
+
    - Line 76: In `_get_tasks_with_filter` method
    - Line 149: In `get_incomplete_tasks` method
    - Line 171: In `update_task_name` method
@@ -165,6 +162,7 @@ The issue is with the `test_complete` function. It's currently defining and exec
 Here's what should be fixed:
 
 1. The task completion functionality should be moved into `OmniFocusManager` as a method, something like:
+
 ```python
 def complete_task(self, task_id: str) -> str:
     """Complete a task by ID."""
@@ -172,10 +170,10 @@ def complete_task(self, task_id: str) -> str:
         function run() {{
             const of = Application('OmniFocus');
             of.includeStandardAdditions = true;
-            
+
             const doc = of.defaultDocument;
             const tasks = doc.flattenedTasks.whose({{id: "{task_id}"}})();
-            
+
             if (tasks.length > 0) {{
                 const task = tasks[0];
                 task.markComplete();
@@ -188,15 +186,16 @@ def complete_task(self, task_id: str) -> str:
 ```
 
 2. Then the `test_complete` function should be updated to use this method:
+
 ```python
 @app.command()
 def test_complete():
     """Test task completion by creating a task, completing it, and verifying the completion."""
     test_name = f"TEST-{uuid.uuid4().hex[:8]}"
     manager.add_task(test_name, note="This is a test task for completion")
-    
+
     print(f"Created test task: {test_name}")
-    
+
     # Get the task ID
     tasks = manager.get_incomplete_tasks()
     task_id = None
@@ -204,24 +203,24 @@ def test_complete():
         if task['name'] == test_name:
             task_id = task['id']
             break
-    
+
     if not task_id:
         print("Could not find test task to complete")
         return
-        
+
     try:
         result = manager.complete_task(task_id)
         print(result)
-        
+
         # Verify task is no longer in incomplete tasks
         tasks_after = manager.get_incomplete_tasks()
         still_exists = any(task['id'] == task_id for task in tasks_after)
-        
+
         if not still_exists:
             print("✓ Verified task is no longer in incomplete tasks")
         else:
             print("✗ Task is still showing as incomplete")
-            
+
     except Exception as e:
         print(f"Error completing task: {e}")
 ```
@@ -242,17 +241,17 @@ I'll implement these changes to properly move the JavaScript command into the `O
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
           self.system.run_javascript(update_script)
-  
+
 +     def complete_task(self, task_id: str) -> str:
 +         """Complete a task by ID.
-+         
++
 +         Args:
 +             task_id: The ID of the task to complete
-+             
++
 +         Returns:
 +             str: A message indicating success or failure
 +         """
@@ -260,10 +259,10 @@ _****_
 +             function run() {{
 +                 const of = Application('OmniFocus');
 +                 of.includeStandardAdditions = true;
-+                 
++
 +                 const doc = of.defaultDocument;
 +                 const tasks = doc.flattenedTasks.whose({{id: "{task_id}"}})();
-+                 
++
 +                 if (tasks.length > 0) {{
 +                     const task = tasks[0];
 +                     task.markComplete();
@@ -273,35 +272,33 @@ _****_
 +             }}
 +         """
 +         return self.system.run_javascript(complete_script)
-+ 
-  
++
+
   def sanitize_task_text(task: str) -> str:
 ```
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 Now I'll update the `test_complete` function to use the new `complete_task` method.
 
 ---
 
-_****_
+_\*\*\*\*_
 
 ```diff
           return
-          
+
 -     # Complete the task
 -     complete_script = f"""
 -         function run() {{
 -             const of = Application('OmniFocus');
 -             of.includeStandardAdditions = true;
--             
+-
 -             const doc = of.defaultDocument;
 -             const tasks = doc.flattenedTasks.whose({{id: "{task_id}"}})();
--             
+-
 -             if (tasks.length > 0) {{
 -                 const task = tasks[0];
 -                 task.markComplete();
@@ -314,14 +311,12 @@ _****_
 -         result = system.run_javascript(complete_script)
 +         result = manager.complete_task(task_id)
           print(result)
-          
+
 ```
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 Great! I've made two changes to properly implement the humble object pattern:
 
@@ -350,19 +345,12 @@ I'll run the test_complete command to verify the changes work correctly.
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-_****_
-
-
+_\*\*\*\*_
 
 ---
 
-
-
 ---
-
