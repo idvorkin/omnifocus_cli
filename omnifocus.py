@@ -24,18 +24,20 @@ from rich.text import Text
 from rich import box
 
 # Create a custom theme for consistent colors
-custom_theme = Theme({
-    "info": "cyan",
-    "warning": "yellow",
-    "danger": "bold red",
-    "success": "green",
-    "project": "blue",
-    "tag": "magenta",
-    "date": "yellow",
-    "flag": "bold red",
-    "header": "bold cyan",
-    "task": "white",
-})
+custom_theme = Theme(
+    {
+        "info": "cyan",
+        "warning": "yellow",
+        "danger": "bold red",
+        "success": "green",
+        "project": "blue",
+        "tag": "magenta",
+        "date": "yellow",
+        "flag": "bold red",
+        "header": "bold cyan",
+        "task": "white",
+    }
+)
 
 # Create a console with our custom theme
 console = Console(theme=custom_theme)
@@ -45,6 +47,7 @@ app = typer.Typer(
     rich_markup_mode="rich",
     no_args_is_help=True,
 )
+
 
 # Add a custom callback for the help option
 @app.callback()
@@ -57,30 +60,36 @@ def main(
     """OmniFocus CLI - Manage OmniFocus from the command line."""
     if help:
         # Create a rich help display
-        console.print(Panel.fit(
-            "[bold cyan]OmniFocus CLI[/bold cyan]\n\n"
-            "[white]A command-line interface for managing OmniFocus tasks.[/white]",
-            border_style="cyan",
-            title="About",
-            subtitle="v0.1.0"
-        ))
-        
+        console.print(
+            Panel.fit(
+                "[bold cyan]OmniFocus CLI[/bold cyan]\n\n"
+                "[white]A command-line interface for managing OmniFocus tasks.[/white]",
+                border_style="cyan",
+                title="About",
+                subtitle="v0.1.0",
+            )
+        )
+
         # Display available commands
-        commands_table = Table(title="Available Commands", box=box.ROUNDED, border_style="cyan")
+        commands_table = Table(
+            title="Available Commands", box=box.ROUNDED, border_style="cyan"
+        )
         commands_table.add_column("Command", style="green")
         commands_table.add_column("Description", style="white")
-        
+
         # Add rows for each command
         commands_table.add_row("list", "List all tasks")
-        commands_table.add_row("list-grouped-tasks", "List tasks grouped by project or tag")
+        commands_table.add_row(
+            "list-grouped-tasks", "List tasks grouped by project or tag"
+        )
         commands_table.add_row("flagged", "Show all flagged tasks")
         commands_table.add_row("add", "Create a new task")
         commands_table.add_row("complete", "Mark a task as completed")
         commands_table.add_row("flag", "Flag a task")
         commands_table.add_row("unflag", "Unflag a task")
-        
+
         console.print(commands_table)
-        
+
         # Display usage examples
         examples = Panel(
             "[bold green]Examples:[/bold green]\n\n"
@@ -91,10 +100,10 @@ def main(
             "[cyan]$ omnifocus flagged[/cyan]\n"
             "[white]Shows all flagged tasks[/white]",
             border_style="green",
-            title="Usage Examples"
+            title="Usage Examples",
         )
         console.print(examples)
-        
+
         raise typer.Exit()
 
 
@@ -817,37 +826,37 @@ def list_grouped_tasks(
 
         task_count = len(groups[group])
         console.print(f"\n[bold][project]{group}[/] [white]({task_count})[/][/bold]")
-        
+
         for task in groups[group]:
             # Build task display with rich formatting
             task_text = Text()
-            
+
             # Add flag emoji if flagged
             if task.flagged:
                 task_text.append("🚩 ", style="flag")
-                
+
             # Add task name
             task_text.append(task.name, style="task")
-            
+
             # Add project info if in tag view
             if view == View.by_tag and task.project:
-                task_text.append(f" (", style="white")
+                task_text.append(" (", style="white")
                 task_text.append(f"{task.project}", style="project")
                 task_text.append(")", style="white")
-            
+
             # Add tags if in project view
             if view == View.by_project and task.tags:
                 tag_str = ", ".join(task.tags)
                 task_text.append(" [", style="white")
                 task_text.append(tag_str, style="tag")
                 task_text.append("]", style="white")
-            
+
             # Add due date if present
             if task.due_date:
                 task_text.append(" [Due: ", style="white")
                 task_text.append(f"{task.due_date.date()}", style="date")
                 task_text.append("]", style="white")
-            
+
             console.print("  • ", end="")
             console.print(task_text)
 
@@ -858,7 +867,7 @@ def list_flagged():
     tasks = manager.get_flagged_tasks()
 
     console.print(Panel.fit("[header]Flagged Tasks[/]", border_style="red"))
-    
+
     # Create a table for flagged tasks
     table = Table(box=box.ROUNDED, border_style="red", expand=True)
     table.add_column("Task", style="task")
@@ -866,24 +875,20 @@ def list_flagged():
     table.add_column("Tags", style="tag")
     table.add_column("Due Date", style="date")
     table.add_column("Created", style="date")
-    
+
     for task in tasks:
         # Format tags as comma-separated list
         tags_str = ", ".join(task.tags) if task.tags else ""
-        
+
         # Format dates
         due_date = task.due_date.date() if task.due_date else ""
         created_date = task.creation_date.date() if task.creation_date else ""
-        
+
         # Add row to table
         table.add_row(
-            f"🚩 {task.name}",
-            task.project,
-            tags_str,
-            str(due_date),
-            str(created_date)
+            f"🚩 {task.name}", task.project, tags_str, str(due_date), str(created_date)
         )
-    
+
     console.print(table)
 
 
@@ -920,40 +925,44 @@ def add(
 
             # Create the task with the title and URL in the note
             new_task = Task(name=title, project=project, tags=tag_list, note=task)
-            manager.create_task(new_task)
+            manager.add_task(task_name=new_task.name, project=new_task.project, tags=new_task.tags, note=new_task.note)
 
             # Show success message with rich formatting
-            console.print(Panel.fit(
-                f"[success]✓ Created task from URL:[/]\n"
-                f"[task]{title}[/]\n"
-                f"[info]Project:[/] [project]{project}[/]\n"
-                f"[info]Tags:[/] [tag]{', '.join(tag_list)}[/]\n"
-                f"[info]URL:[/] {task}",
-                title="Task Created",
-                border_style="green"
-            ))
+            console.print(
+                Panel.fit(
+                    f"[success]✓ Created task from URL:[/]\n"
+                    f"[task]{title}[/]\n"
+                    f"[info]Project:[/] [project]{project}[/]\n"
+                    f"[info]Tags:[/] [tag]{', '.join(tag_list)}[/]\n"
+                    f"[info]URL:[/] {task}",
+                    title="Task Created",
+                    border_style="green",
+                )
+            )
         except Exception as e:
             # Show error message with rich formatting
             console.print(f"[danger]Error creating task from URL: {e}[/]")
             # Fallback to creating a regular task with the URL as the name
             new_task = Task(name=task, project=project, tags=tag_list)
-            manager.create_task(new_task)
-            console.print(f"[warning]Created task with URL as name instead.[/]")
+            manager.add_task(task_name=new_task.name, project=new_task.project, tags=new_task.tags)
+            console.print("[warning]Created task with URL as name instead.[/]")
     else:
         # Create a regular task
         new_task = Task(name=task, project=project, tags=tag_list)
-        manager.create_task(new_task)
-        
+        manager.add_task(task_name=new_task.name, project=new_task.project, tags=new_task.tags)
+
         # Show success message with rich formatting
         tag_display = f"[tag]{', '.join(tag_list)}[/]" if tag_list else "[dim]None[/]"
-        console.print(Panel.fit(
-            f"[success]✓ Created task:[/]\n"
-            f"[task]{task}[/]\n"
-            f"[info]Project:[/] [project]{project}[/]\n"
-            f"[info]Tags:[/] {tag_display}",
-            title="Task Created",
-            border_style="green"
-        ))
+        console.print(
+            Panel.fit(
+                f"[success]✓ Created task:[/]\n"
+                f"[task]{task}[/]\n"
+                f"[info]Project:[/] [project]{project}[/]\n"
+                f"[info]Tags:[/] {tag_display}",
+                title="Task Created",
+                border_style="green",
+            )
+        )
 
 
 @app.command()
@@ -1358,15 +1367,15 @@ def list_tags():
     system = OSXSystem()
     manager = OmniFocusManager(system)
     tags = manager.get_all_tags()
-    
+
     # Create a panel with all tags
     tag_panel = Panel.fit(
         "\n".join([f"[tag]{tag}[/]" for tag in sorted(tags)]),
         title="[header]Available Tags[/]",
         border_style="magenta",
-        padding=(1, 2)
+        padding=(1, 2),
     )
-    
+
     console.print(tag_panel)
     console.print(f"[info]Total tags:[/] [bold]{len(tags)}[/bold]")
 
@@ -1377,15 +1386,19 @@ def cleanup_tags():
     system = OSXSystem()
     manager = OmniFocusManager(system)
     count = manager.delete_untitled_tags()
-    
+
     if count == 0:
-        console.print(Panel("[info]No empty or untitled tags found.[/]", border_style="green"))
+        console.print(
+            Panel("[info]No empty or untitled tags found.[/]", border_style="green")
+        )
     else:
-        console.print(Panel(
-            f"[success]Deleted {count} empty/untitled tag{'s' if count > 1 else ''}.[/]",
-            border_style="green",
-            title="Cleanup Complete"
-        ))
+        console.print(
+            Panel(
+                f"[success]Deleted {count} empty/untitled tag{'s' if count > 1 else ''}.[/]",
+                border_style="green",
+                title="Cleanup Complete",
+            )
+        )
 
 
 @app.command(name="manage-tags")
