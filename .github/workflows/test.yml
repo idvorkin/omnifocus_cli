@@ -47,7 +47,7 @@ jobs:
             pytest.xml
           comment_mode: always
 
-      - name: Generate test summary
+      - name: Generate test summary and update badge
         if: always()
         run: |
           if [ -f pytest.xml ]; then
@@ -65,14 +65,33 @@ jobs:
             
             if [ $((FAILURES + ERRORS)) -eq 0 ]; then
               TEST_STATUS="$PASSED/$TESTS passing"
+              TEST_COLOR="brightgreen"
               echo "✅ All tests passed: $TEST_STATUS"
             else
               TEST_STATUS="$PASSED/$TESTS passing"
+              TEST_COLOR="red"
               echo "❌ Some tests failed: $TEST_STATUS"
             fi
+            
+            echo "📊 Test Results: $TEST_STATUS"
           else
+            TEST_STATUS="no tests"
+            TEST_COLOR="lightgrey"
             echo "❌ No test results found"
           fi
+
+          # Create badge JSON and update gist
+          echo "{\"schemaVersion\": 1, \"label\": \"tests\", \"message\": \"$TEST_STATUS\", \"color\": \"$TEST_COLOR\"}" > test-badge.json
+
+          # Try to update the gist - if it fails, just log it
+          if ! echo '{}' | gh gist edit ${{ secrets.GIST_ID }} test-badge.json --filename test-badge.json; then
+            echo "⚠️ Could not update gist badge, but tests completed successfully"
+            echo "Badge would show: $TEST_STATUS"
+          else
+            echo "✅ Updated badge: $TEST_STATUS"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GIST_TOKEN }}
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
@@ -81,4 +100,5 @@ jobs:
           name: test-results
           path: |
             pytest.xml
-            pytest_output.txt 
+            pytest_output.txt
+            test-badge.json 
