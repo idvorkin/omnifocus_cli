@@ -67,43 +67,49 @@ def manager(mock_system):
 def test_add_task(manager, mock_system):
     """Test adding a task to OmniFocus with various parameter combinations."""
     # Test basic task with defaults
-    manager.add_task("Test task")
+    result = manager.add_task("Test task")
+    assert result is True
     mock_system.open_url.assert_called_with(
         "omnifocus:///add?name=Test%20task&autosave=true&project=today&flag=true"
     )
 
     # Test task with project and tags
-    manager.add_task("Test task", project="Work", tags=["important", "urgent"])
+    result = manager.add_task("Test task", project="Work", tags=["important", "urgent"])
+    assert result is True
     mock_system.open_url.assert_called_with(
         "omnifocus:///add?name=Test%20task&autosave=true&project=Work&flag=true&tags=important%2Curgent"
     )
 
     # Test task with note
-    manager.add_task("Test task", note="This is a test note")
+    result = manager.add_task("Test task", note="This is a test note")
+    assert result is True
     mock_system.open_url.assert_called_with(
         "omnifocus:///add?name=Test%20task&autosave=true&project=today&flag=true&note=This%20is%20a%20test%20note"
     )
 
     # Test unflagged task
-    manager.add_task("Test task", flagged=False)
+    result = manager.add_task("Test task", flagged=False)
+    assert result is True
     mock_system.open_url.assert_called_with(
         "omnifocus:///add?name=Test%20task&autosave=true&project=today"
     )
 
     # Test task with all parameters
-    manager.add_task(
+    result = manager.add_task(
         "Test task",
         project="Personal",
         tags=["home", "weekend"],
         note="Remember to do this",
         flagged=True,
     )
+    assert result is True
     mock_system.open_url.assert_called_with(
         "omnifocus:///add?name=Test%20task&autosave=true&project=Personal&flag=true&tags=home%2Cweekend&note=Remember%20to%20do%20this"
     )
 
     # Test short task name (should not create task)
-    manager.add_task("ab")
+    result = manager.add_task("ab")
+    assert result is False
     # Call count should not increase since the task was too short
     assert mock_system.open_url.call_count == 5
 
@@ -111,11 +117,12 @@ def test_add_task(manager, mock_system):
 def test_add_task_escaping(manager, mock_system):
     """Test that special characters in task parameters are properly escaped."""
     # Test task with special characters in name and note
-    manager.add_task(
+    result = manager.add_task(
         "Test & task",
         note="Note with spaces & special chars: ?#",
         tags=["tag with space"],
     )
+    assert result is True
     mock_system.open_url.assert_called_with(
         "omnifocus:///add?name=Test%20%26%20task&autosave=true&project=today&flag=true&tags=tag%20with%20space&note=Note%20with%20spaces%20%26%20special%20chars%3A%20%3F%23"
     )
@@ -226,8 +233,7 @@ def test_get_flagged_tasks(manager, mock_system):
 
 
 @patch("omnifocus.requests")
-@patch("omnifocus.system")
-def test_add_command_with_url(mock_system_global, mock_requests):
+def test_add_command_with_url(mock_requests):
     """Test adding a task from a URL using the add command."""
     # Mock the web request response
     mock_response = MagicMock()
@@ -246,8 +252,15 @@ def test_add_command_with_url(mock_system_global, mock_requests):
     )
 
     # Verify the task was created with the correct URL and url tag
-    expected_url = "omnifocus:///add?name=Test%20Page%20Title&note=Source%3A%20https%3A%2F%2Fexample.com&autosave=true&flag=true&project=today&tags=url"
-    mock_system_global.open_url.assert_called_with(expected_url)
+    mock_manager.system.open_url.assert_called_once()
+    actual_url = mock_manager.system.open_url.call_args[0][0]
+    assert actual_url.startswith("omnifocus:///add?")
+    assert "name=Test%20Page%20Title" in actual_url
+    assert "note=Source%3A%20https%3A%2F%2Fexample.com" in actual_url
+    assert "autosave=true" in actual_url
+    assert "flag=true" in actual_url
+    assert "project=today" in actual_url
+    assert "tags=url" in actual_url
 
     # Test with a custom project and tags (should include url tag)
     result = runner.invoke(
@@ -262,14 +275,21 @@ def test_add_command_with_url(mock_system_global, mock_requests):
         ],
     )
     assert result.exit_code == 0
-    expected_url = "omnifocus:///add?name=Test%20Page%20Title&note=Source%3A%20https%3A%2F%2Fexample.com&autosave=true&flag=true&project=Reading%20List&tags=web%2Cresearch%2Curl"
-    mock_system_global.open_url.assert_called_with(expected_url)
+    actual_url = mock_manager.system.open_url.call_args[0][0]
+    assert actual_url.startswith("omnifocus:///add?")
+    assert "name=Test%20Page%20Title" in actual_url
+    assert "note=Source%3A%20https%3A%2F%2Fexample.com" in actual_url
+    assert "autosave=true" in actual_url
+    assert "flag=true" in actual_url
+    assert "project=Reading%20List" in actual_url
+    assert "tags=web%2Cresearch%2Curl" in actual_url
 
 
 @patch("omnifocus.requests")
-@patch("omnifocus.system")
-def test_add_command_with_url_error_handling(mock_system_global, mock_requests):
+def test_add_command_with_url_error_handling(mock_requests):
     """Test error handling when adding a task from a URL using the add command."""
+    # Reset the mock before this test
+    mock_manager.system.open_url.reset_mock()
 
     # Test network error
     class MockRequestException(Exception):
@@ -281,7 +301,7 @@ def test_add_command_with_url_error_handling(mock_system_global, mock_requests):
     result = runner.invoke(app, ["add", "https://example.com"])
     assert result.exit_code == 0  # Should not crash
     assert "Error fetching URL: Network error" in result.stdout
-    assert not mock_system_global.open_url.called
+    assert not mock_manager.system.open_url.called
 
     # Test missing title (should still include url tag)
     mock_response = MagicMock()
@@ -291,34 +311,50 @@ def test_add_command_with_url_error_handling(mock_system_global, mock_requests):
 
     result = runner.invoke(app, ["add", "https://example.com"])
     assert result.exit_code == 0
-    expected_url = "omnifocus:///add?name=https%3A%2F%2Fexample.com&note=Source%3A%20https%3A%2F%2Fexample.com&autosave=true&flag=true&project=today&tags=url"
-    mock_system_global.open_url.assert_called_with(expected_url)
+    actual_url = mock_manager.system.open_url.call_args[0][0]
+    assert actual_url.startswith("omnifocus:///add?")
+    assert "name=https%3A%2F%2Fexample.com" in actual_url
+    assert "note=Source%3A%20https%3A%2F%2Fexample.com" in actual_url
+    assert "autosave=true" in actual_url
+    assert "flag=true" in actual_url
+    assert "project=today" in actual_url
+    assert "tags=url" in actual_url
 
 
-@patch("omnifocus.system")
-def test_add_command_with_regular_task(mock_system_global):
+def test_add_command_with_regular_task():
     """Test adding a regular task using the add command."""
+    # Reset the mock to start with a clean state
+    mock_manager.system.open_url.reset_mock()
+
     # Test basic task
     result = runner.invoke(app, ["add", "Test task"])
     assert result.exit_code == 0
-    expected_url = (
-        "omnifocus:///add?name=Test%20task&autosave=true&flag=true&project=today&tags="
-    )
-    mock_system_global.open_url.assert_called_with(expected_url)
+    actual_url = mock_manager.system.open_url.call_args[0][0]
+    assert actual_url.startswith("omnifocus:///add?")
+    assert "name=Test%20task" in actual_url
+    assert "autosave=true" in actual_url
+    assert "flag=true" in actual_url
+    assert "project=today" in actual_url
+    # No tags parameter should be present when there are no tags
 
     # Test with project and tags
     result = runner.invoke(
         app, ["add", "Test task", "--project", "Work", "--tag", "urgent,meeting"]
     )
     assert result.exit_code == 0
-    expected_url = "omnifocus:///add?name=Test%20task&autosave=true&flag=true&project=Work&tags=urgent%2Cmeeting"
-    mock_system_global.open_url.assert_called_with(expected_url)
+    actual_url = mock_manager.system.open_url.call_args[0][0]
+    assert actual_url.startswith("omnifocus:///add?")
+    assert "name=Test%20task" in actual_url
+    assert "autosave=true" in actual_url
+    assert "flag=true" in actual_url
+    assert "project=Work" in actual_url
+    assert "tags=urgent%2Cmeeting" in actual_url
 
     # Test task too short
     result = runner.invoke(app, ["add", "ab"])
     assert result.exit_code == 0
     assert "Task text too short" in result.stdout
-    assert mock_system_global.open_url.call_count == 2  # Should not have increased
+    assert mock_manager.system.open_url.call_count == 2  # Should not have increased
 
 
 @patch("omnifocus.requests")

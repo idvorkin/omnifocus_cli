@@ -221,7 +221,7 @@ class OmniFocusManager:
         tags: List[str] | None = None,
         note: str = "",
         flagged: bool = True,
-    ) -> None:
+    ) -> bool:
         """Add a task to OmniFocus.
 
         Args:
@@ -230,9 +230,13 @@ class OmniFocusManager:
             tags: List of tags to apply to the task
             note: Additional notes for the task
             flagged: Whether to flag the task (defaults to True)
+
+        Returns:
+            bool: True if task was created successfully, False if validation failed
         """
         if len(task_name) < 3:
-            return
+            console.print("[danger]Task text too short[/]")
+            return False
 
         params = {
             "name": task_name,
@@ -252,6 +256,7 @@ class OmniFocusManager:
         )
         ic("Running", url)
         self.system.open_url(url)
+        return True
 
     def get_incomplete_tasks(self) -> List[Task]:
         """Get all incomplete tasks with their IDs, names and notes."""
@@ -785,7 +790,9 @@ def add_tasks_from_clipboard(
         else:
             print(f"• {task_name}")
             if not print_only:
-                manager.add_task(task_name, tags=tags)
+                success = manager.add_task(task_name, tags=tags)
+                if not success:
+                    print(f"  ✗ Failed to add task: {task_name}")
 
 
 class View(str, Enum):
@@ -929,7 +936,7 @@ def add(
             tag_list.append("url")
 
             # Fetch the webpage
-            response = requests.get(task, timeout=10)
+            response = requests.get(task, headers={"User-Agent": "Mozilla/5.0"})
             response.raise_for_status()
 
             # Parse the HTML and extract the title
@@ -937,54 +944,66 @@ def add(
             title = soup.title.string.strip() if soup.title else task
 
             # Create the task with the title and URL in the note
-            new_task = Task(name=title, project=project, tags=tag_list, note=task)
-            manager.add_task(
+            new_task = Task(
+                name=title, project=project, tags=tag_list, note=f"Source: {task}"
+            )
+            success = manager.add_task(
                 task_name=new_task.name,
                 project=new_task.project,
                 tags=new_task.tags,
                 note=new_task.note,
             )
 
-            # Show success message with rich formatting
-            console.print(
-                Panel.fit(
-                    f"[success]✓ Created task from URL:[/]\n"
-                    f"[task]{title}[/]\n"
-                    f"[info]Project:[/] [project]{project}[/]\n"
-                    f"[info]Tags:[/] [tag]{', '.join(tag_list)}[/]\n"
-                    f"[info]URL:[/] {task}",
-                    title="Task Created",
-                    border_style="green",
+            # Show success message with rich formatting only if task was created
+            if success:
+                console.print(
+                    Panel.fit(
+                        f"[success]✓ Created task from URL:[/]\n"
+                        f"[task]{title}[/]\n"
+                        f"[info]Project:[/] [project]{project}[/]\n"
+                        f"[info]Tags:[/] [tag]{', '.join(tag_list)}[/]\n"
+                        f"[info]URL:[/] {task}",
+                        title="Task Created",
+                        border_style="green",
+                    )
                 )
-            )
+        except requests.exceptions.RequestException as e:
+            # Show error message with rich formatting
+            console.print(f"[danger]Error fetching URL: {e}[/]")
+            # Don't create a fallback task for network errors
+            return
         except Exception as e:
             # Show error message with rich formatting
             console.print(f"[danger]Error creating task from URL: {e}[/]")
             # Fallback to creating a regular task with the URL as the name
             new_task = Task(name=task, project=project, tags=tag_list)
-            manager.add_task(
+            success = manager.add_task(
                 task_name=new_task.name, project=new_task.project, tags=new_task.tags
             )
-            console.print("[warning]Created task with URL as name instead.[/]")
+            if success:
+                console.print("[warning]Created task with URL as name instead.[/]")
     else:
         # Create a regular task
         new_task = Task(name=task, project=project, tags=tag_list)
-        manager.add_task(
+        success = manager.add_task(
             task_name=new_task.name, project=new_task.project, tags=new_task.tags
         )
 
-        # Show success message with rich formatting
-        tag_display = f"[tag]{', '.join(tag_list)}[/]" if tag_list else "[dim]None[/]"
-        console.print(
-            Panel.fit(
-                f"[success]✓ Created task:[/]\n"
-                f"[task]{task}[/]\n"
-                f"[info]Project:[/] [project]{project}[/]\n"
-                f"[info]Tags:[/] {tag_display}",
-                title="Task Created",
-                border_style="green",
+        # Show success message with rich formatting only if task was created
+        if success:
+            tag_display = (
+                f"[tag]{', '.join(tag_list)}[/]" if tag_list else "[dim]None[/]"
             )
-        )
+            console.print(
+                Panel.fit(
+                    f"[success]✓ Created task:[/]\n"
+                    f"[task]{task}[/]\n"
+                    f"[info]Project:[/] [project]{project}[/]\n"
+                    f"[info]Tags:[/] {tag_display}",
+                    title="Task Created",
+                    border_style="green",
+                )
+            )
 
 
 @app.command()
@@ -1055,12 +1074,15 @@ def test_tag(
     # Step 1: Create a task with the tag
     print(f"Step 1: Creating test task '{test_name}' with tag '{tag_name}'")
     # Always add to Testing project and include the testing tag
-    manager.add_task(
+    success = manager.add_task(
         test_name,
         project="Testing",
         tags=["testing", tag_name],
         note=f"Test task with tag: {tag_name}",
     )
+    if not success:
+        print(f"✗ Failed to create test task '{test_name}'")
+        return
     time.sleep(1)  # Brief pause to ensure OmniFocus has time to process
 
     # Verify tag was assigned
@@ -1143,12 +1165,15 @@ def test_update():
 
     # Create a task
     print(f"Creating test task '{test_name}'")
-    manager.add_task(
+    success = manager.add_task(
         test_name,
         project="Testing",
         tags=["testing"],
         note="Test task for update functionality",
     )
+    if not success:
+        print(f"✗ Failed to create test task '{test_name}'")
+        return
     time.sleep(1)  # Brief pause to ensure OmniFocus has time to process
 
     # Get the task
@@ -1183,9 +1208,12 @@ def test_append():
 
     # Create a task
     print(f"Creating test task '{test_name}'")
-    manager.add_task(
+    success = manager.add_task(
         test_name, project="Testing", tags=["testing"], note="Initial note"
     )
+    if not success:
+        print(f"✗ Failed to create test task '{test_name}'")
+        return
     time.sleep(1)  # Brief pause to ensure OmniFocus has time to process
 
     # Get the task
@@ -1220,9 +1248,12 @@ def test_append_pydantic():
 
     # Create a task
     print(f"Creating test task '{test_name}'")
-    manager.add_task(
+    success = manager.add_task(
         test_name, project="Testing", tags=["testing"], note="Initial note"
     )
+    if not success:
+        print(f"✗ Failed to create test task '{test_name}'")
+        return
     time.sleep(1)  # Brief pause to ensure OmniFocus has time to process
 
     # Get the task
@@ -1299,12 +1330,15 @@ def test_complete():
 
     # Create a task
     print(f"Creating test task '{test_name}'")
-    manager.add_task(
+    success = manager.add_task(
         test_name,
         project="Testing",
         tags=["testing"],
         note="Test task for completion functionality",
     )
+    if not success:
+        print(f"✗ Failed to create test task '{test_name}'")
+        return
     time.sleep(1)  # Brief pause to ensure OmniFocus has time to process
 
     # Get the task
