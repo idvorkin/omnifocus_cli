@@ -36,6 +36,7 @@ from rich.table import Table
 from rich.text import Text
 from rich import box
 
+
 # Create a custom theme for consistent colors
 custom_theme = Theme(
     {
@@ -126,6 +127,113 @@ class OSXSystem:
         cmd = ["y", command] + list(args)
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         return result.stdout.strip()
+
+
+class LLMTaskShortener:
+    """Humble object for LLM-powered task name shortening using Simon Willison's llm CLI."""
+
+    def __init__(self, model: str = "gpt-4o-mini"):
+        """Initialize the LLM task shortener.
+
+        Args:
+            model: Model to use with llm CLI (defaults to gpt-4o-mini)
+        """
+        self.model = model
+
+    def shorten_task_name(self, task_name: str) -> str:
+        """Shorten a task name using LLM via the llm CLI tool.
+
+        Args:
+            task_name: The original task name to shorten
+
+        Returns:
+            str: Shortened task name, or original name if LLM fails
+        """
+        try:
+            prompt = f"""You are a productivity assistant helping to create concise flow session names from OmniFocus task descriptions.
+
+Task: "{task_name}"
+
+Create a short, focused session name (2-6 words) that captures the essential action and context. Follow these guidelines:
+
+1. Remove project prefixes, dates, and administrative details
+2. Focus on the core action or deliverable
+3. Keep technical terms if they're essential
+4. Use active, engaging language
+5. Aim for 2-6 words maximum
+
+Examples:
+- "Review Q4 budget spreadsheet for finance team meeting" → "Review Q4 Budget"
+- "Call client about project timeline and deliverables" → "Client Timeline Call"
+- "Write blog post about productivity techniques" → "Write Productivity Post"
+- "https://example.com/article - Read and summarize" → "Read Article Summary"
+
+Return only the shortened name, no explanation."""
+
+            # Use llm CLI tool to get the shortened name
+            result = subprocess.run(
+                ["llm", "-m", self.model, prompt],
+                capture_output=True,
+                text=True,
+                timeout=10.0,
+                check=True,
+            )
+
+            shortened_name = result.stdout.strip()
+
+            # Validate the response isn't empty and isn't too long
+            if shortened_name and len(shortened_name) <= 50:
+                return shortened_name
+            else:
+                return task_name
+
+        except subprocess.CalledProcessError as e:
+            # Fallback to original name if llm command fails
+            console.print(f"[warning]llm command failed: {e}[/]")
+            return task_name
+        except subprocess.TimeoutExpired:
+            console.print("[warning]llm command timed out[/]")
+            return task_name
+        except FileNotFoundError:
+            console.print(
+                "[warning]llm command not found. Install with: pip install llm[/]"
+            )
+            return task_name
+        except Exception as e:
+            # Fallback to original name if LLM fails
+            console.print(f"[warning]LLM shortening failed: {e}[/]")
+            return task_name
+
+
+def interactive_edit_session_name(suggested_name: str) -> Optional[str]:
+    """Allow user to edit session name interactively.
+
+    Args:
+        suggested_name: The suggested session name to edit
+
+    Returns:
+        Optional[str]: Final session name, or None if cancelled
+    """
+    try:
+        console.print(f"[info]Suggested session name:[/] [bold]{suggested_name}[/]")
+        console.print()
+
+        # Use input() with the suggested name as default
+        user_input = input("Edit session name (or press Enter to continue): ")
+
+        # If user just pressed Enter, use the suggested name
+        if not user_input.strip():
+            return suggested_name
+
+        # Return the edited name
+        return user_input.strip()
+
+    except KeyboardInterrupt:
+        console.print("\n[warning]Session creation cancelled.[/]")
+        return None
+    except EOFError:
+        console.print("\n[warning]Session creation cancelled.[/]")
+        return None
 
 
 class OmniFocusManager:
@@ -1675,22 +1783,61 @@ def flow(
             help="Task number from the interesting command to use as flow session name"
         ),
     ],
+    no_shorten: Annotated[
+        bool,
+        typer.Option("--no-shorten", help="Disable LLM-powered task name shortening"),
+    ] = False,
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            "--dry-run", help="Show what would happen without starting the session"
+        ),
+    ] = False,
 ):
-    """Start a flow session using the name of a task from the interesting command."""
+    """Start a flow session with LLM-shortened task name and interactive editing."""
     try:
         source, selected_task = _get_task_by_number(task_num)
 
-        # Use the task name as the flow session name
+        console.print(f"[info]Task:[/] [bold]{selected_task.name}[/]")
+
+        # Start with the original task name
         session_name = selected_task.name
 
-        # Start the flow session using the global manager
-        result = manager.start_flow_session(session_name)
+        # Apply LLM shortening if enabled
+        if not no_shorten:
+            try:
+                shortener = LLMTaskShortener()
+                session_name = shortener.shorten_task_name(selected_task.name)
+            except Exception as e:
+                console.print(f"[warning]LLM shortening failed: {e}[/]")
+                console.print("[info]Continuing with original task name...[/]")
 
-        console.print(f"[green]✓[/] {result}")
-        console.print(f"  From task: [bold]{selected_task.name}[/]")
+        # Interactive editing
+        final_session_name = interactive_edit_session_name(session_name)
+
+        # Early return if user cancelled
+        if final_session_name is None:
+            return
+
+        # Show what would happen in dry run mode
+        if dry_run:
+            console.print("\n[info]Dry run - would execute:[/]")
+            console.print(f"  y flow-rename '{final_session_name}'")
+            console.print("  y flow-go")
+            console.print(
+                f"\n[success]✓ Would start flow session:[/] [bold]{final_session_name}[/]"
+            )
+            console.print(f"  [info]From task:[/] {selected_task.name}")
+            return
+
+        # Start the flow session using the global manager
+        result = manager.start_flow_session(final_session_name)
+
+        console.print(f"\n[green]✓[/] {result}")
+        console.print(f"  [info]From task:[/] {selected_task.name}")
 
     except ValueError as e:
-        print(str(e))
+        console.print(f"[red]✗[/] {str(e)}")
     except subprocess.CalledProcessError as e:
         console.print(f"[red]✗[/] Failed to start flow session: {e}")
     except FileNotFoundError:
