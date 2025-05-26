@@ -37,3 +37,12 @@ repos:
         name: Dasel YAML/JSON Validator
         files: \.(json|yaml|yml)$
 
+  # 🧪 Local fast tests
+  - repo: local
+    hooks:
+      - id: test
+        name: Run Fast Tests
+        entry: just fast-test
+        language: system
+        pass_filenames: false
+        always_run: true
