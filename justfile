@@ -4,7 +4,7 @@ default:
 
 # Run fast tests (called by pre-commit)
 fast-test:
-    @echo "0/0 tests passed - Add tests"
+    @just test
 
 # Install in virtual environment
 install:
