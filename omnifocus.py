@@ -1363,6 +1363,29 @@ def _format_task_line(index: int, source: str, task: Task) -> str:
     return f"{index:2d}. {web_icon}{flag}{task.name}{project}{tags}{due}{created} ({source})"
 
 
+def _get_task_by_number(task_num: int) -> Tuple[str, Task]:
+    """Get a task by its number from the interesting tasks list.
+
+    Args:
+        task_num: The task number (1-based)
+
+    Returns:
+        Tuple of (source, task) if valid
+
+    Raises:
+        ValueError: If no tasks available or invalid task number
+    """
+    all_tasks = _get_interesting_tasks()
+
+    if not all_tasks:
+        raise ValueError(NO_TASKS_FOUND_ERROR)
+
+    if not _validate_task_number(task_num, len(all_tasks)):
+        raise ValueError(TASK_NUMBER_RANGE_ERROR.format(len(all_tasks)))
+
+    return all_tasks[task_num - 1]
+
+
 @app.command()
 def interesting():
     """Show numbered list of inbox and flagged tasks"""
@@ -1447,29 +1470,6 @@ def _validate_task_number(num: int, max_tasks: int) -> bool:
     return 1 <= num <= max_tasks
 
 
-def _complete_single_task(
-    num: int, all_tasks: List[Tuple[str, Task]], dry_run: bool
-) -> Tuple[Optional[str], Optional[str]]:
-    """Complete a single task and return success/error message.
-
-    Returns:
-        Tuple of (success_message, error_message) - one will be None
-    """
-    if not _validate_task_number(num, len(all_tasks)):
-        return None, f"✗ {num}: Invalid task number"
-
-    source, selected_task = all_tasks[num - 1]
-
-    if dry_run:
-        return f"Would complete {num}: {selected_task.name} ({source})", None
-
-    try:
-        manager.complete(selected_task)
-        return f"✓ {num}: {selected_task.name}", None
-    except Exception as e:
-        return None, f"✗ {num}: {selected_task.name} - {str(e)}"
-
-
 @app.command()
 def complete(
     dry_run: Annotated[
@@ -1483,16 +1483,9 @@ def complete(
     ] = "",
 ):
     """List interesting tasks and complete specified task numbers."""
-    all_tasks = _get_interesting_tasks()
-
     # Early return if no task numbers provided
     if not task_nums:
         interesting()
-        return
-
-    # Early return if no tasks available
-    if not all_tasks:
-        typer.echo(NO_TASKS_FOUND_ERROR)
         return
 
     # Parse and validate task numbers
@@ -1506,11 +1499,21 @@ def complete(
     errors = []
 
     for num in nums:
-        success_msg, error_msg = _complete_single_task(num, all_tasks, dry_run)
-        if success_msg:
-            completed.append(success_msg)
-        if error_msg:
-            errors.append(error_msg)
+        try:
+            source, selected_task = _get_task_by_number(num)
+
+            if dry_run:
+                completed.append(
+                    f"Would complete {num}: {selected_task.name} ({source})"
+                )
+            else:
+                try:
+                    manager.complete(selected_task)
+                    completed.append(f"✓ {num}: {selected_task.name}")
+                except Exception as e:
+                    errors.append(f"✗ {num}: {selected_task.name} - {str(e)}")
+        except ValueError as e:
+            errors.append(f"✗ {num}: {str(e)}")
 
     # Display results
     if completed:
@@ -1644,32 +1647,22 @@ def open_task(
     ],
 ):
     """Open the URL from a task by its number from the interesting command."""
-    all_tasks = _get_interesting_tasks()
-
-    # Early return if no tasks available
-    if not all_tasks:
-        print(NO_TASKS_FOUND_ERROR)
-        return
-
-    # Early return if invalid task number
-    if not _validate_task_number(task_num, len(all_tasks)):
-        print(TASK_NUMBER_RANGE_ERROR.format(len(all_tasks)))
-        return
-
-    # Get the selected task
-    source, selected_task = all_tasks[task_num - 1]
-
-    # Early return if no URL found
-    url = extract_url_from_task(selected_task)
-    if not url:
-        print(f"Task '{selected_task.name}' does not contain a URL")
-        return
-
-    # Attempt to open URL
     try:
+        source, selected_task = _get_task_by_number(task_num)
+
+        # Early return if no URL found
+        url = extract_url_from_task(selected_task)
+        if not url:
+            print(f"Task '{selected_task.name}' does not contain a URL")
+            return
+
+        # Attempt to open URL
         system.open_url(url)
         print(f"✓ Opened URL: {url}")
         print(f"  From task: {selected_task.name}")
+
+    except ValueError as e:
+        print(str(e))
     except Exception as e:
         print(f"✗ Error opening URL: {e}")
 
@@ -1684,31 +1677,20 @@ def flow(
     ],
 ):
     """Start a flow session using the name of a task from the interesting command."""
-    all_tasks = _get_interesting_tasks()
-
-    # Early return if no tasks available
-    if not all_tasks:
-        print(NO_TASKS_FOUND_ERROR)
-        return
-
-    # Early return if invalid task number
-    if not _validate_task_number(task_num, len(all_tasks)):
-        print(TASK_NUMBER_RANGE_ERROR.format(len(all_tasks)))
-        return
-
-    # Get the selected task
-    source, selected_task = all_tasks[task_num - 1]
-
-    # Use the task name as the flow session name
-    session_name = selected_task.name
-
-    # Start the flow session using the global manager
     try:
+        source, selected_task = _get_task_by_number(task_num)
+
+        # Use the task name as the flow session name
+        session_name = selected_task.name
+
+        # Start the flow session using the global manager
         result = manager.start_flow_session(session_name)
 
         console.print(f"[green]✓[/] {result}")
         console.print(f"  From task: [bold]{selected_task.name}[/]")
 
+    except ValueError as e:
+        print(str(e))
     except subprocess.CalledProcessError as e:
         console.print(f"[red]✗[/] Failed to start flow session: {e}")
     except FileNotFoundError:
