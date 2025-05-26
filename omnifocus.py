@@ -55,6 +55,13 @@ custom_theme = Theme(
 # Create a console with our custom theme
 console = Console(theme=custom_theme)
 
+# Constants for better maintainability
+TASK_NUMBER_RANGE_ERROR = "Invalid task number. Please enter a number between 1 and {}"
+NO_TASKS_FOUND_ERROR = "No interesting tasks found!"
+INVALID_TASK_NUMBERS_ERROR = (
+    "Invalid task numbers. Please provide space-separated integers."
+)
+
 app = typer.Typer(
     help="OmniFocus CLI - Manage OmniFocus from the command line",
     rich_markup_mode="rich",
@@ -96,8 +103,12 @@ def main(
             "list-grouped-tasks", "List tasks grouped by project or tag"
         )
         commands_table.add_row("flagged", "Show all flagged tasks")
+        commands_table.add_row(
+            "interesting", "Show numbered list of inbox and flagged tasks (🌐 for URLs)"
+        )
         commands_table.add_row("add", "Create a new task")
         commands_table.add_row("complete", "Mark a task as completed")
+        commands_table.add_row("open-task", "Open URL from a task by number")
         commands_table.add_row("flag", "Flag a task")
         commands_table.add_row("unflag", "Unflag a task")
 
@@ -108,10 +119,12 @@ def main(
             "[bold green]Examples:[/bold green]\n\n"
             "[cyan]$ omnifocus add 'Buy groceries' --project 'Errands' --tag 'shopping'[/cyan]\n"
             "[white]Creates a new task in the Errands project with the shopping tag[/white]\n\n"
-            "[cyan]$ omnifocus list-grouped-tasks --view by_project[/cyan]\n"
-            "[white]Lists all tasks grouped by their projects[/white]\n\n"
-            "[cyan]$ omnifocus flagged[/cyan]\n"
-            "[white]Shows all flagged tasks[/white]",
+            "[cyan]$ omnifocus interesting[/cyan]\n"
+            "[white]Shows numbered inbox and flagged tasks (🌐 indicates URLs)[/white]\n\n"
+            "[cyan]$ omnifocus open-task 3[/cyan]\n"
+            "[white]Opens the URL from task number 3 in your browser[/white]\n\n"
+            "[cyan]$ omnifocus complete '1 3 5'[/cyan]\n"
+            "[white]Completes tasks 1, 3, and 5 from the interesting list[/white]",
             border_style="green",
             title="Usage Examples",
         )
@@ -1280,6 +1293,30 @@ def test_append_pydantic():
         print("✗ Failed to append text to task note using Pydantic Task object")
 
 
+def extract_url_from_task(task: Task) -> Optional[str]:
+    """Extract the first URL found in a task's note or name.
+
+    Args:
+        task: The task to extract URL from
+
+    Returns:
+        The first URL found, or None if no URL is present
+    """
+    url_pattern = r'(https?://[^\s)"]+)'
+
+    # Check note first
+    if task.note:
+        urls = re.findall(url_pattern, task.note)
+        if urls:
+            return urls[0]
+
+    # Check name if no URL in note
+    if re.match(url_pattern, task.name.strip()):
+        return task.name.strip()
+
+    return None
+
+
 def _get_interesting_tasks() -> List[Tuple[str, Task]]:
     """Get deduplicated list of inbox and flagged tasks with their sources."""
     inbox_tasks = manager.get_inbox_tasks()
@@ -1304,28 +1341,46 @@ def _get_interesting_tasks() -> List[Tuple[str, Task]]:
     return all_tasks
 
 
+def _format_task_line(index: int, source: str, task: Task) -> str:
+    """Format a single task line for display.
+
+    Args:
+        index: Task number (1-based)
+        source: Source of the task ("Inbox" or "Flagged")
+        task: The task object
+
+    Returns:
+        Formatted string for display
+    """
+    # Build optional components
+    project = f" ({task.project})" if task.project != "Inbox" else ""
+    tags = f" [{', '.join(task.tags)}]" if task.tags else ""
+    due = f" [Due: {task.due_date.date()}]" if task.due_date else ""
+    created = f" [Created: {task.creation_date.date()}]" if task.creation_date else ""
+
+    # Build icons
+    flag = "🚩 " if task.flagged else ""
+    web_icon = "🌐 " if extract_url_from_task(task) else ""
+
+    return f"{index:2d}. {web_icon}{flag}{task.name}{project}{tags}{due}{created} ({source})"
+
+
 @app.command()
 def interesting():
     """Show numbered list of inbox and flagged tasks"""
     all_tasks = _get_interesting_tasks()
 
+    # Early return if no tasks
     if not all_tasks:
-        print("\nNo interesting tasks found!")
+        print(f"\n{NO_TASKS_FOUND_ERROR}")
         return
 
     print("\nInteresting Tasks:")
     print("=================")
 
-    # Print tasks with numbers
+    # Print formatted tasks
     for i, (source, task) in enumerate(all_tasks, 1):
-        project = f" ({task.project})" if task.project != "Inbox" else ""
-        tags = f" [{', '.join(task.tags)}]" if task.tags else ""
-        due = f" [Due: {task.due_date.date()}]" if task.due_date else ""
-        created = (
-            f" [Created: {task.creation_date.date()}]" if task.creation_date else ""
-        )
-        flag = "🚩 " if task.flagged else ""
-        print(f"{i:2d}. {flag}{task.name}{project}{tags}{due}{created} ({source})")
+        print(_format_task_line(i, source, task))
 
 
 @app.command()
@@ -1374,6 +1429,49 @@ def test_complete():
         )
 
 
+def _parse_task_numbers(task_nums_str: str) -> Optional[List[int]]:
+    """Parse space-separated task numbers from string.
+
+    Returns:
+        List of integers or None if parsing fails
+    """
+    if not task_nums_str:
+        return None
+
+    try:
+        return [int(n.strip()) for n in task_nums_str.split()]
+    except ValueError:
+        return None
+
+
+def _validate_task_number(num: int, max_tasks: int) -> bool:
+    """Validate if task number is within valid range."""
+    return 1 <= num <= max_tasks
+
+
+def _complete_single_task(
+    num: int, all_tasks: List[Tuple[str, Task]], dry_run: bool
+) -> Tuple[Optional[str], Optional[str]]:
+    """Complete a single task and return success/error message.
+
+    Returns:
+        Tuple of (success_message, error_message) - one will be None
+    """
+    if not _validate_task_number(num, len(all_tasks)):
+        return None, f"✗ {num}: Invalid task number"
+
+    source, selected_task = all_tasks[num - 1]
+
+    if dry_run:
+        return f"Would complete {num}: {selected_task.name} ({source})", None
+
+    try:
+        manager.complete(selected_task)
+        return f"✓ {num}: {selected_task.name}", None
+    except Exception as e:
+        return None, f"✗ {num}: {selected_task.name} - {str(e)}"
+
+
 @app.command()
 def complete(
     dry_run: Annotated[
@@ -1387,46 +1485,39 @@ def complete(
     ] = "",
 ):
     """List interesting tasks and complete specified task numbers."""
-    # Get the same task list as the interesting command
     all_tasks = _get_interesting_tasks()
 
-    # If no task numbers provided, just list tasks
+    # Early return if no task numbers provided
     if not task_nums:
         interesting()
         return
 
-    # Parse task numbers
-    try:
-        nums = [int(n.strip()) for n in task_nums.split()]
-    except ValueError:
-        typer.echo("Invalid task numbers. Please provide space-separated integers.")
+    # Early return if no tasks available
+    if not all_tasks:
+        typer.echo(NO_TASKS_FOUND_ERROR)
         return
 
-    # Complete tasks
+    # Parse and validate task numbers
+    nums = _parse_task_numbers(task_nums)
+    if nums is None:
+        typer.echo(INVALID_TASK_NUMBERS_ERROR)
+        return
+
+    # Process each task number
     completed = []
     errors = []
+
     for num in nums:
-        if num < 1 or num > len(all_tasks):
-            errors.append(f"✗ {num}: Invalid task number")
-            continue
+        success_msg, error_msg = _complete_single_task(num, all_tasks, dry_run)
+        if success_msg:
+            completed.append(success_msg)
+        if error_msg:
+            errors.append(error_msg)
 
-        source, selected_task = all_tasks[num - 1]
-
-        if dry_run:
-            completed.append(f"Would complete {num}: {selected_task.name} ({source})")
-        else:
-            try:
-                manager.complete(selected_task)
-                completed.append(f"✓ {num}: {selected_task.name}")
-            except Exception as e:
-                errors.append(f"✗ {num}: {selected_task.name} - {str(e)}")
-
-    # Show results
+    # Display results
     if completed:
-        if dry_run:
-            typer.echo("\nDry run - would complete:")
-        else:
-            typer.echo("\nCompleted tasks:")
+        header = "\nDry run - would complete:" if dry_run else "\nCompleted tasks:"
+        typer.echo(header)
         for msg in completed:
             typer.echo(msg)
 
@@ -1543,6 +1634,46 @@ def manage_tags(
         typer.echo(
             "No tag operation specified. Use --add, --remove, or --clear to manage tags."
         )
+
+
+@app.command()
+def open_task(
+    task_num: Annotated[
+        int,
+        typer.Argument(
+            help="Task number from the interesting command to open URL from"
+        ),
+    ],
+):
+    """Open the URL from a task by its number from the interesting command."""
+    all_tasks = _get_interesting_tasks()
+
+    # Early return if no tasks available
+    if not all_tasks:
+        print(NO_TASKS_FOUND_ERROR)
+        return
+
+    # Early return if invalid task number
+    if not _validate_task_number(task_num, len(all_tasks)):
+        print(TASK_NUMBER_RANGE_ERROR.format(len(all_tasks)))
+        return
+
+    # Get the selected task
+    source, selected_task = all_tasks[task_num - 1]
+
+    # Early return if no URL found
+    url = extract_url_from_task(selected_task)
+    if not url:
+        print(f"Task '{selected_task.name}' does not contain a URL")
+        return
+
+    # Attempt to open URL
+    try:
+        system.open_url(url)
+        print(f"✓ Opened URL: {url}")
+        print(f"  From task: {selected_task.name}")
+    except Exception as e:
+        print(f"✗ Error opening URL: {e}")
 
 
 if __name__ == "__main__":

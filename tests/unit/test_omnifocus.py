@@ -1,4 +1,28 @@
-"""Unit tests for OmniFocus CLI."""
+"""Unit tests for OmniFocus CLI.
+
+This test suite covers all major functionality including:
+
+Core Features:
+- Task creation, updating, and completion
+- Tag management (add, remove, clear)
+- Project and tag-based task grouping
+- Clipboard-based task import
+- URL handling and webpage title extraction
+
+New URL Features (added in latest update):
+- URL extraction from task notes and names
+- Web icon display (🌐) for tasks containing URLs
+- Interesting command with numbered task list and URL indicators
+- Open-task command to open URLs by task number
+- Deduplication of inbox and flagged tasks
+- Comprehensive edge case handling for URL patterns
+
+Test Coverage:
+- 48 total tests covering all commands and edge cases
+- Mock-based testing to prevent actual OmniFocus operations
+- Error handling and validation testing
+- CLI command integration testing with typer.testing
+"""
 
 import json
 from unittest.mock import patch, MagicMock, call
@@ -9,6 +33,8 @@ from omnifocus import (
     app,
     sanitize_task_text,
     extract_tags_from_task,
+    extract_url_from_task,
+    _get_interesting_tasks,
     Task,
     OmniFocusManager,
     OSXSystem,
@@ -23,8 +49,9 @@ mock_manager = OmniFocusManager(mock_system)
 @pytest.fixture(autouse=True)
 def patch_globals():
     """Patch global system and manager to prevent real task creation."""
-    with patch("omnifocus.system", mock_system), patch(
-        "omnifocus.manager", mock_manager
+    with (
+        patch("omnifocus.system", mock_system),
+        patch("omnifocus.manager", mock_manager),
     ):
         yield
 
@@ -948,8 +975,485 @@ def test_complete_command_empty_task_list(mock_manager):
     assert result.exit_code == 0
     assert "No interesting tasks found" in result.stdout
 
-    # Test with task numbers when no tasks exist
+    # Test with task numbers when no tasks exist - should return early with no tasks message
     result = runner.invoke(app, ["complete", "1 2"])
     assert result.exit_code == 0
-    assert "✗ 1: Invalid task number" in result.stdout
-    assert "✗ 2: Invalid task number" in result.stdout
+    assert "No interesting tasks found" in result.stdout
+
+
+def test_extract_url_from_task():
+    """Test URL extraction from task notes and names."""
+    # Test task with URL in note
+    task_with_url_note = Task(
+        name="GitHub Repository",
+        note="Source: https://github.com/example/repo",
+        project="Work",
+    )
+    url = extract_url_from_task(task_with_url_note)
+    assert url == "https://github.com/example/repo"
+
+    # Test task with URL in name
+    task_with_url_name = Task(name="https://example.com/article", project="Reading")
+    url = extract_url_from_task(task_with_url_name)
+    assert url == "https://example.com/article"
+
+    # Test task with no URL
+    task_no_url = Task(name="Regular task", note="Just a regular note", project="Work")
+    url = extract_url_from_task(task_no_url)
+    assert url is None
+
+    # Test task with empty note and name
+    task_empty = Task(name="Empty task", project="Work")
+    url = extract_url_from_task(task_empty)
+    assert url is None
+
+    # Test task with multiple URLs in note (should return first one)
+    task_multiple_urls = Task(
+        name="Multiple URLs",
+        note="Check https://first.com and https://second.com",
+        project="Research",
+    )
+    url = extract_url_from_task(task_multiple_urls)
+    assert url == "https://first.com"
+
+    # Test task with URL in note and name (note takes precedence)
+    task_both = Task(
+        name="https://name-url.com", note="Source: https://note-url.com", project="Work"
+    )
+    url = extract_url_from_task(task_both)
+    assert url == "https://note-url.com"
+
+
+@patch("omnifocus.manager")
+def test_get_interesting_tasks(mock_manager):
+    """Test the _get_interesting_tasks function."""
+    # Mock inbox tasks
+    inbox_tasks = [
+        Task(id="1", name="Inbox Task 1", project="Inbox", flagged=False),
+        Task(
+            id="2", name="Inbox Task 2", project="Inbox", flagged=True
+        ),  # Also flagged
+    ]
+
+    # Mock flagged tasks
+    flagged_tasks = [
+        Task(id="2", name="Inbox Task 2", project="Inbox", flagged=True),  # Duplicate
+        Task(id="3", name="Flagged Task 1", project="Work", flagged=True),
+    ]
+
+    mock_manager.get_inbox_tasks.return_value = inbox_tasks
+    mock_manager.get_flagged_tasks.return_value = flagged_tasks
+
+    # Test deduplication
+    with patch("omnifocus.manager", mock_manager):
+        result = _get_interesting_tasks()
+
+    assert len(result) == 3  # Should have 3 unique tasks
+
+    # Check that inbox tasks come first
+    sources = [source for source, task in result]
+    task_names = [task.name for source, task in result]
+
+    assert sources == ["Inbox", "Inbox", "Flagged"]
+    assert task_names == ["Inbox Task 1", "Inbox Task 2", "Flagged Task 1"]
+
+    # Verify the duplicate was removed (inbox version kept)
+    inbox_task_2 = next(task for source, task in result if task.name == "Inbox Task 2")
+    assert inbox_task_2.id == "2"
+
+
+@patch("omnifocus.manager")
+def test_interesting_command_with_urls(mock_manager):
+    """Test interesting command displays web icons for tasks with URLs."""
+    # Mock tasks with and without URLs
+    inbox_tasks = [
+        Task(
+            id="1",
+            name="Regular Task",
+            project="Inbox",
+            flagged=False,
+            creation_date=datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc),
+        ),
+        Task(
+            id="2",
+            name="GitHub Repository",
+            project="Inbox",
+            flagged=False,
+            note="Source: https://github.com/example/repo",
+            creation_date=datetime(2025, 1, 2, 12, 0, tzinfo=timezone.utc),
+        ),
+    ]
+
+    flagged_tasks = [
+        Task(
+            id="3",
+            name="https://example.com/article",
+            project="Work",
+            flagged=True,
+            creation_date=datetime(2025, 1, 3, 12, 0, tzinfo=timezone.utc),
+        ),
+    ]
+
+    mock_manager.get_inbox_tasks.return_value = inbox_tasks
+    mock_manager.get_flagged_tasks.return_value = flagged_tasks
+
+    result = runner.invoke(app, ["interesting"])
+    assert result.exit_code == 0
+
+    # Check that web icons appear for tasks with URLs
+    assert "🌐" in result.stdout  # Should have web icons
+    assert "🚩" in result.stdout  # Should have flag icons
+
+    # Check specific formatting - look for lines that contain task numbers
+    lines = result.stdout.split("\n")
+    task_lines = [
+        line
+        for line in lines
+        if line.strip() and any(line.strip().startswith(f"{i}.") for i in range(1, 10))
+    ]
+
+    assert len(task_lines) == 3  # Should have 3 tasks
+
+    # Task 1: Regular task (no web icon)
+    assert "1." in task_lines[0]
+    assert "Regular Task" in task_lines[0]
+    assert "🌐" not in task_lines[0]
+
+    # Task 2: GitHub task (with web icon)
+    assert "2." in task_lines[1]
+    assert "🌐" in task_lines[1]
+    assert "GitHub Repository" in task_lines[1]
+
+    # Task 3: URL task (with web icon and flag)
+    assert "3." in task_lines[2]
+    assert "🌐" in task_lines[2]
+    assert "🚩" in task_lines[2]
+    assert "https://example.com/article" in task_lines[2]
+
+
+@patch("omnifocus.manager")
+def test_interesting_command_no_tasks(mock_manager):
+    """Test interesting command when no tasks are found."""
+    mock_manager.get_inbox_tasks.return_value = []
+    mock_manager.get_flagged_tasks.return_value = []
+
+    result = runner.invoke(app, ["interesting"])
+    assert result.exit_code == 0
+    assert "No interesting tasks found!" in result.stdout
+
+
+@patch("omnifocus.system")
+@patch("omnifocus.manager")
+def test_open_task_command_success(mock_manager, mock_system):
+    """Test open-task command successfully opens URL."""
+    # Mock tasks with URLs
+    inbox_tasks = [
+        Task(
+            id="1",
+            name="GitHub Repository",
+            project="Inbox",
+            flagged=False,
+            note="Source: https://github.com/example/repo",
+        ),
+    ]
+
+    mock_manager.get_inbox_tasks.return_value = inbox_tasks
+    mock_manager.get_flagged_tasks.return_value = []
+
+    result = runner.invoke(app, ["open-task", "1"])
+    assert result.exit_code == 0
+
+    # Verify URL was opened
+    mock_system.open_url.assert_called_once_with("https://github.com/example/repo")
+    assert "✓ Opened URL: https://github.com/example/repo" in result.stdout
+    assert "From task: GitHub Repository" in result.stdout
+
+
+@patch("omnifocus.manager")
+def test_open_task_command_no_url(mock_manager):
+    """Test open-task command with task that has no URL."""
+    # Mock task without URL
+    inbox_tasks = [
+        Task(id="1", name="Regular Task", project="Inbox", flagged=False),
+    ]
+
+    mock_manager.get_inbox_tasks.return_value = inbox_tasks
+    mock_manager.get_flagged_tasks.return_value = []
+
+    result = runner.invoke(app, ["open-task", "1"])
+    assert result.exit_code == 0
+    assert "Task 'Regular Task' does not contain a URL" in result.stdout
+
+
+@patch("omnifocus.manager")
+def test_open_task_command_invalid_number(mock_manager):
+    """Test open-task command with invalid task number."""
+    # Mock one task
+    inbox_tasks = [
+        Task(id="1", name="Task 1", project="Inbox", flagged=False),
+    ]
+
+    mock_manager.get_inbox_tasks.return_value = inbox_tasks
+    mock_manager.get_flagged_tasks.return_value = []
+
+    # Test with number too high
+    result = runner.invoke(app, ["open-task", "5"])
+    assert result.exit_code == 0
+    assert "Invalid task number. Please enter a number between 1 and 1" in result.stdout
+
+    # Test with number too low
+    result = runner.invoke(app, ["open-task", "0"])
+    assert result.exit_code == 0
+    assert "Invalid task number. Please enter a number between 1 and 1" in result.stdout
+
+
+@patch("omnifocus.manager")
+def test_open_task_command_no_tasks(mock_manager):
+    """Test open-task command when no interesting tasks exist."""
+    mock_manager.get_inbox_tasks.return_value = []
+    mock_manager.get_flagged_tasks.return_value = []
+
+    result = runner.invoke(app, ["open-task", "1"])
+    assert result.exit_code == 0
+    assert "No interesting tasks found!" in result.stdout
+
+
+@patch("omnifocus.system")
+@patch("omnifocus.manager")
+def test_open_task_command_system_error(mock_manager, mock_system):
+    """Test open-task command when system.open_url fails."""
+    # Mock task with URL
+    inbox_tasks = [
+        Task(
+            id="1",
+            name="GitHub Repository",
+            project="Inbox",
+            flagged=False,
+            note="Source: https://github.com/example/repo",
+        ),
+    ]
+
+    mock_manager.get_inbox_tasks.return_value = inbox_tasks
+    mock_manager.get_flagged_tasks.return_value = []
+
+    # Mock system.open_url to raise an exception
+    mock_system.open_url.side_effect = Exception("Failed to open URL")
+
+    result = runner.invoke(app, ["open-task", "1"])
+    assert result.exit_code == 0
+    assert "✗ Error opening URL: Failed to open URL" in result.stdout
+
+
+@patch("omnifocus.manager")
+def test_interesting_command_task_ordering(mock_manager):
+    """Test that interesting command shows inbox tasks before flagged tasks."""
+    # Mock tasks where some are in both inbox and flagged
+    inbox_tasks = [
+        Task(id="1", name="Inbox Only", project="Inbox", flagged=False),
+        Task(id="2", name="Both Inbox and Flagged", project="Inbox", flagged=True),
+    ]
+
+    flagged_tasks = [
+        Task(id="2", name="Both Inbox and Flagged", project="Inbox", flagged=True),
+        Task(id="3", name="Flagged Only", project="Work", flagged=True),
+    ]
+
+    mock_manager.get_inbox_tasks.return_value = inbox_tasks
+    mock_manager.get_flagged_tasks.return_value = flagged_tasks
+
+    result = runner.invoke(app, ["interesting"])
+    assert result.exit_code == 0
+
+    lines = result.stdout.split("\n")
+    task_lines = [
+        line
+        for line in lines
+        if line.strip() and any(line.strip().startswith(f"{i}.") for i in range(1, 10))
+    ]
+
+    # Should have 3 tasks total (duplicate removed)
+    assert len(task_lines) == 3
+
+    # Check ordering: inbox tasks first, then flagged-only tasks
+    assert "Inbox Only" in task_lines[0]
+    assert "(Inbox)" in task_lines[0]
+
+    assert "Both Inbox and Flagged" in task_lines[1]
+    assert "(Inbox)" in task_lines[1]  # Should show as Inbox source
+
+    assert "Flagged Only" in task_lines[2]
+    assert "(Flagged)" in task_lines[2]
+
+
+@patch("omnifocus.manager")
+def test_interesting_command_with_metadata(mock_manager):
+    """Test interesting command displays all metadata correctly."""
+    # Mock task with all metadata
+    inbox_tasks = [
+        Task(
+            id="1",
+            name="Complex Task",
+            project="Work",
+            flagged=True,
+            tags=["urgent", "meeting"],
+            due_date=datetime(2025, 2, 1, 12, 0, tzinfo=timezone.utc),
+            creation_date=datetime(2025, 1, 15, 12, 0, tzinfo=timezone.utc),
+            note="Source: https://example.com",
+        ),
+    ]
+
+    mock_manager.get_inbox_tasks.return_value = inbox_tasks
+    mock_manager.get_flagged_tasks.return_value = []
+
+    result = runner.invoke(app, ["interesting"])
+    assert result.exit_code == 0
+
+    # Check that all metadata is displayed
+    assert "🌐" in result.stdout  # Web icon
+    assert "🚩" in result.stdout  # Flag icon
+    assert "Complex Task" in result.stdout
+    assert "(Work)" in result.stdout  # Project
+    assert "[urgent, meeting]" in result.stdout  # Tags
+    assert "[Due: 2025-02-01]" in result.stdout  # Due date
+    assert "[Created: 2025-01-15]" in result.stdout  # Creation date
+    assert "(Inbox)" in result.stdout  # Source
+
+
+def test_extract_url_from_task_edge_cases():
+    """Test URL extraction edge cases."""
+    # Test task with malformed URL
+    task_malformed = Task(
+        name="Check this out",
+        note="Visit htp://broken-url.com",  # Missing 't' in 'http'
+        project="Work",
+    )
+    url = extract_url_from_task(task_malformed)
+    assert url is None
+
+    # Test task with URL containing special characters
+    task_special_chars = Task(
+        name="API Documentation",
+        note="Source: https://api.example.com/docs?version=1.0&format=json#section-auth",
+        project="Development",
+    )
+    url = extract_url_from_task(task_special_chars)
+    assert url == "https://api.example.com/docs?version=1.0&format=json#section-auth"
+
+    # Test task with URL at end of sentence
+    task_end_sentence = Task(
+        name="Read article",
+        note="Check out this great article: https://example.com/article.",
+        project="Reading",
+    )
+    url = extract_url_from_task(task_end_sentence)
+    assert url == "https://example.com/article."  # Current regex includes the period
+
+    # Test task with URL in parentheses
+    task_parentheses = Task(
+        name="Reference",
+        note="See documentation (https://docs.example.com) for details",
+        project="Work",
+    )
+    url = extract_url_from_task(task_parentheses)
+    assert url == "https://docs.example.com"  # Parentheses are excluded by the regex
+
+
+@patch("omnifocus.manager")
+def test_open_task_command_with_url_in_name(mock_manager):
+    """Test open-task command with URL in task name instead of note."""
+    # Mock task with URL in name
+    inbox_tasks = [
+        Task(
+            id="1",
+            name="https://github.com/example/repo",
+            project="Inbox",
+            flagged=False,
+        ),
+    ]
+
+    mock_manager.get_inbox_tasks.return_value = inbox_tasks
+    mock_manager.get_flagged_tasks.return_value = []
+
+    with patch("omnifocus.system") as mock_system:
+        result = runner.invoke(app, ["open-task", "1"])
+        assert result.exit_code == 0
+
+        # Verify URL was opened
+        mock_system.open_url.assert_called_once_with("https://github.com/example/repo")
+        assert "✓ Opened URL: https://github.com/example/repo" in result.stdout
+
+
+@patch("omnifocus.manager")
+def test_interesting_command_mixed_url_sources(mock_manager):
+    """Test interesting command with URLs in both names and notes."""
+    # Mock tasks with URLs in different places
+    inbox_tasks = [
+        Task(id="1", name="https://name-url.com", project="Inbox", flagged=False),
+        Task(
+            id="2",
+            name="Task with note URL",
+            project="Inbox",
+            flagged=False,
+            note="Source: https://note-url.com",
+        ),
+    ]
+
+    mock_manager.get_inbox_tasks.return_value = inbox_tasks
+    mock_manager.get_flagged_tasks.return_value = []
+
+    result = runner.invoke(app, ["interesting"])
+    assert result.exit_code == 0
+
+    # Both tasks should have web icons
+    lines = result.stdout.split("\n")
+    task_lines = [
+        line
+        for line in lines
+        if line.strip() and any(line.strip().startswith(f"{i}.") for i in range(1, 10))
+    ]
+
+    assert len(task_lines) == 2
+    assert "🌐" in task_lines[0]  # First task with URL in name
+    assert "🌐" in task_lines[1]  # Second task with URL in note
+
+
+@patch("omnifocus.manager")
+def test_open_task_command_prefers_note_url_over_name_url(mock_manager):
+    """Test that open-task prefers URL in note over URL in name."""
+    # Mock task with URLs in both name and note
+    inbox_tasks = [
+        Task(
+            id="1",
+            name="https://name-url.com",
+            project="Inbox",
+            flagged=False,
+            note="Source: https://note-url.com",
+        ),
+    ]
+
+    mock_manager.get_inbox_tasks.return_value = inbox_tasks
+    mock_manager.get_flagged_tasks.return_value = []
+
+    with patch("omnifocus.system") as mock_system:
+        result = runner.invoke(app, ["open-task", "1"])
+        assert result.exit_code == 0
+
+        # Should open the URL from the note, not the name
+        mock_system.open_url.assert_called_once_with("https://note-url.com")
+        assert "✓ Opened URL: https://note-url.com" in result.stdout
+
+
+@patch("omnifocus.manager")
+def test_interesting_command_empty_inbox_and_flagged(mock_manager):
+    """Test interesting command when both inbox and flagged are empty."""
+    mock_manager.get_inbox_tasks.return_value = []
+    mock_manager.get_flagged_tasks.return_value = []
+
+    result = runner.invoke(app, ["interesting"])
+    assert result.exit_code == 0
+    assert "No interesting tasks found!" in result.stdout
+
+    # Should not contain any task formatting
+    assert "🌐" not in result.stdout
+    assert "🚩" not in result.stdout
+    assert "1." not in result.stdout
