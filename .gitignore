@@ -27,6 +27,7 @@ azure-credentials.json
 *credentials*
 *token*
 .netrc
+uv.lock
 
 # ==============================================================================
 # MACOS
@@ -207,8 +208,9 @@ htmlcov/
 .venv
 env/
 venv/
-ENV/ 
+ENV/
 .aider*
+COMMIT_MSG
 
 # ==============================================================================
 # SPECSTORY & CHOP LOGS
