@@ -4,7 +4,8 @@ default:
 
 # Run fast tests (called by pre-commit)
 fast-test:
-    uv run pytest tests/ -v
+    just test
+
 
 # Install globally using uv tool
 global-install:
@@ -12,7 +13,7 @@ global-install:
 
 # Run tests
 test:
-    uv run pytest tests/ -v
+    uv run pytest
 
 # Run tests with coverage
 coverage:
