@@ -1457,3 +1457,127 @@ def test_interesting_command_empty_inbox_and_flagged(mock_manager):
     assert "🌐" not in result.stdout
     assert "🚩" not in result.stdout
     assert "1." not in result.stdout
+
+
+@patch("omnifocus.manager")
+def test_flagged_command_consistent_numbering(mock_manager):
+    """Test that flagged command shows consistent index numbers with interesting command."""
+    # Mock tasks where some are in inbox and some are flagged only
+    inbox_tasks = [
+        Task(id="1", name="Inbox Task 1", project="Inbox", flagged=False),
+        Task(id="2", name="Both Inbox and Flagged", project="Inbox", flagged=True),
+        Task(id="3", name="Inbox Task 2", project="Inbox", flagged=False),
+    ]
+
+    flagged_tasks = [
+        Task(id="2", name="Both Inbox and Flagged", project="Inbox", flagged=True),
+        Task(id="4", name="Flagged Only", project="Work", flagged=True),
+    ]
+
+    mock_manager.get_inbox_tasks.return_value = inbox_tasks
+    mock_manager.get_flagged_tasks.return_value = flagged_tasks
+
+    result = runner.invoke(app, ["flagged"])
+    assert result.exit_code == 0
+
+    # Should show only flagged tasks but with consistent numbering from interesting
+    # In interesting: 1=Inbox Task 1, 2=Both Inbox and Flagged, 3=Inbox Task 2, 4=Flagged Only
+    # In flagged: should show tasks 2 and 4 with their original indices
+    assert "2" in result.stdout  # Index for "Both Inbox and Flagged"
+    assert "4" in result.stdout  # Index for "Flagged Only"
+    assert "Both Inbox and Flagged" in result.stdout
+    assert "Flagged Only" in result.stdout
+
+    # Should not show non-flagged tasks
+    assert "Inbox Task 1" not in result.stdout
+    assert "Inbox Task 2" not in result.stdout
+
+
+@patch("omnifocus.manager")
+def test_flagged_command_with_web_icons(mock_manager):
+    """Test that flagged command shows web icons for tasks with URLs."""
+    flagged_tasks = [
+        Task(
+            id="1",
+            name="Regular Flagged Task",
+            project="Work",
+            flagged=True,
+            creation_date=datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc),
+        ),
+        Task(
+            id="2",
+            name="Flagged Task with URL",
+            project="Work",
+            flagged=True,
+            note="Source: https://example.com",
+            creation_date=datetime(2025, 1, 2, 12, 0, tzinfo=timezone.utc),
+        ),
+    ]
+
+    mock_manager.get_inbox_tasks.return_value = []
+    mock_manager.get_flagged_tasks.return_value = flagged_tasks
+
+    result = runner.invoke(app, ["flagged"])
+    assert result.exit_code == 0
+
+    # Check that web icons appear for tasks with URLs
+    assert "🌐" in result.stdout
+    assert "🚩" in result.stdout  # Flag icons should still be present
+    assert "Regular Flagged Task" in result.stdout
+    # Task name might be wrapped in table, so check for partial strings
+    assert "Flagged Task with" in result.stdout
+    assert "URL" in result.stdout
+
+
+@patch("omnifocus.manager")
+def test_flagged_command_no_flagged_tasks(mock_manager):
+    """Test flagged command when no flagged tasks exist."""
+    # Mock inbox tasks but no flagged tasks
+    inbox_tasks = [
+        Task(id="1", name="Inbox Task", project="Inbox", flagged=False),
+    ]
+
+    mock_manager.get_inbox_tasks.return_value = inbox_tasks
+    mock_manager.get_flagged_tasks.return_value = []
+
+    result = runner.invoke(app, ["flagged"])
+    assert result.exit_code == 0
+    assert "No flagged tasks found!" in result.stdout
+
+
+@patch("omnifocus.manager")
+def test_flagged_command_table_format(mock_manager):
+    """Test that flagged command maintains rich table format."""
+    flagged_tasks = [
+        Task(
+            id="1",
+            name="Test Task",
+            project="Work",
+            flagged=True,
+            tags=["urgent", "meeting"],
+            due_date=datetime(2025, 2, 1, 12, 0, tzinfo=timezone.utc),
+            creation_date=datetime(2025, 1, 15, 12, 0, tzinfo=timezone.utc),
+        ),
+    ]
+
+    mock_manager.get_inbox_tasks.return_value = []
+    mock_manager.get_flagged_tasks.return_value = flagged_tasks
+
+    result = runner.invoke(app, ["flagged"])
+    assert result.exit_code == 0
+
+    # Check table structure and content
+    assert "Flagged Tasks" in result.stdout
+    assert "Index" in result.stdout
+    assert "Task" in result.stdout
+    assert "Project" in result.stdout
+    assert "Tags" in result.stdout
+    assert "Due Date" in result.stdout
+    assert "Created" in result.stdout
+
+    # Check task content
+    assert "Test Task" in result.stdout
+    assert "Work" in result.stdout
+    assert "urgent, meeting" in result.stdout
+    assert "2025-02-01" in result.stdout
+    assert "2025-01-15" in result.stdout

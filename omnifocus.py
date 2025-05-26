@@ -896,20 +896,33 @@ def list_grouped_tasks(
 
 @app.command(name="flagged")
 def list_flagged():
-    """Show all flagged tasks with their creation dates"""
-    tasks = manager.get_flagged_tasks()
+    """Show flagged tasks with consistent index numbers from interesting command"""
+    # Get the same task list as interesting command for consistent numbering
+    all_interesting_tasks = _get_interesting_tasks()
+
+    # Filter to only flagged tasks but keep their original index numbers
+    flagged_with_indices = []
+    for i, (source, task) in enumerate(all_interesting_tasks, 1):
+        if task.flagged:
+            flagged_with_indices.append((i, task))
+
+    # Early return if no flagged tasks
+    if not flagged_with_indices:
+        console.print("[dim]No flagged tasks found![/]")
+        return
 
     console.print(Panel.fit("[header]Flagged Tasks[/]", border_style="red"))
 
-    # Create a table for flagged tasks
+    # Create a table for flagged tasks with index column
     table = Table(box=box.ROUNDED, border_style="red", expand=True)
+    table.add_column("Index", style="bold cyan", width=6, justify="center")
     table.add_column("Task", style="task")
     table.add_column("Project", style="project")
     table.add_column("Tags", style="tag")
     table.add_column("Due Date", style="date")
     table.add_column("Created", style="date")
 
-    for task in tasks:
+    for index, task in flagged_with_indices:
         # Format tags as comma-separated list
         tags_str = ", ".join(task.tags) if task.tags else ""
 
@@ -917,9 +930,20 @@ def list_flagged():
         due_date = task.due_date.date() if task.due_date else ""
         created_date = task.creation_date.date() if task.creation_date else ""
 
+        # Build task display with icons
+        task_display = "🚩 "
+        if extract_url_from_task(task):
+            task_display += "🌐 "
+        task_display += task.name
+
         # Add row to table
         table.add_row(
-            f"🚩 {task.name}", task.project, tags_str, str(due_date), str(created_date)
+            str(index),
+            task_display,
+            task.project,
+            tags_str,
+            str(due_date),
+            str(created_date),
         )
 
     console.print(table)
