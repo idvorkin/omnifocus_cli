@@ -27,6 +27,7 @@ repos:
       - id: prettier
         name: Prettier (Markdown & HTML only)
         files: \.(md|html)$
+        exclude: ^(\.specstory/|zz-chop-logs/)
 
   # 🧾 Dasel: YAML and JSON schema/structure validator
   - repo: https://github.com/TomWright/dasel

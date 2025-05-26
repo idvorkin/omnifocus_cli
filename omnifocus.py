@@ -925,7 +925,12 @@ def add(
 
             # Create the task with the title and URL in the note
             new_task = Task(name=title, project=project, tags=tag_list, note=task)
-            manager.add_task(task_name=new_task.name, project=new_task.project, tags=new_task.tags, note=new_task.note)
+            manager.add_task(
+                task_name=new_task.name,
+                project=new_task.project,
+                tags=new_task.tags,
+                note=new_task.note,
+            )
 
             # Show success message with rich formatting
             console.print(
@@ -944,12 +949,16 @@ def add(
             console.print(f"[danger]Error creating task from URL: {e}[/]")
             # Fallback to creating a regular task with the URL as the name
             new_task = Task(name=task, project=project, tags=tag_list)
-            manager.add_task(task_name=new_task.name, project=new_task.project, tags=new_task.tags)
+            manager.add_task(
+                task_name=new_task.name, project=new_task.project, tags=new_task.tags
+            )
             console.print("[warning]Created task with URL as name instead.[/]")
     else:
         # Create a regular task
         new_task = Task(name=task, project=project, tags=tag_list)
-        manager.add_task(task_name=new_task.name, project=new_task.project, tags=new_task.tags)
+        manager.add_task(
+            task_name=new_task.name, project=new_task.project, tags=new_task.tags
+        )
 
         # Show success message with rich formatting
         tag_display = f"[tag]{', '.join(tag_list)}[/]" if tag_list else "[dim]None[/]"
