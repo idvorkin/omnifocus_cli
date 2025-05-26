@@ -109,6 +109,24 @@ class OSXSystem:
         """Get content from clipboard."""
         return pyperclip.paste()
 
+    @staticmethod
+    def run_flow_command(command: str, *args: str) -> str:
+        """Run a flow command using the y CLI tool.
+
+        Args:
+            command: The flow command to run (e.g., 'flow-rename', 'flow-go')
+            *args: Additional arguments for the command
+
+        Returns:
+            str: Command output
+
+        Raises:
+            subprocess.CalledProcessError: If the command fails
+        """
+        cmd = ["y", command] + list(args)
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        return result.stdout.strip()
+
 
 class OmniFocusManager:
     """Manager for OmniFocus operations."""
@@ -430,6 +448,26 @@ class OmniFocusManager:
         """
         result = self.system.run_javascript(javascript)
         return json.loads(result)
+
+    def start_flow_session(self, session_name: str) -> str:
+        """Start a flow session with the given name.
+
+        Args:
+            session_name: The name for the flow session
+
+        Returns:
+            str: Success message
+
+        Raises:
+            subprocess.CalledProcessError: If flow commands fail
+        """
+        # First rename the flow session
+        self.system.run_flow_command("flow-rename", session_name)
+
+        # Then start the flow session
+        self.system.run_flow_command("flow-go")
+
+        return f"Started flow session: {session_name}"
 
     def remove_tag_from_task(self, task: Task, tag_name: str) -> bool:
         """Remove a tag from a task.
@@ -1634,6 +1672,51 @@ def open_task(
         print(f"  From task: {selected_task.name}")
     except Exception as e:
         print(f"✗ Error opening URL: {e}")
+
+
+@app.command()
+def flow(
+    task_num: Annotated[
+        int,
+        typer.Argument(
+            help="Task number from the interesting command to use as flow session name"
+        ),
+    ],
+):
+    """Start a flow session using the name of a task from the interesting command."""
+    all_tasks = _get_interesting_tasks()
+
+    # Early return if no tasks available
+    if not all_tasks:
+        print(NO_TASKS_FOUND_ERROR)
+        return
+
+    # Early return if invalid task number
+    if not _validate_task_number(task_num, len(all_tasks)):
+        print(TASK_NUMBER_RANGE_ERROR.format(len(all_tasks)))
+        return
+
+    # Get the selected task
+    source, selected_task = all_tasks[task_num - 1]
+
+    # Use the task name as the flow session name
+    session_name = selected_task.name
+
+    # Start the flow session using the global manager
+    try:
+        result = manager.start_flow_session(session_name)
+
+        console.print(f"[green]✓[/] {result}")
+        console.print(f"  From task: [bold]{selected_task.name}[/]")
+
+    except subprocess.CalledProcessError as e:
+        console.print(f"[red]✗[/] Failed to start flow session: {e}")
+    except FileNotFoundError:
+        console.print(
+            "[red]✗[/] Flow command 'y' not found. Make sure it's installed and in your PATH."
+        )
+    except Exception as e:
+        console.print(f"[red]✗[/] Error starting flow session: {e}")
 
 
 if __name__ == "__main__":

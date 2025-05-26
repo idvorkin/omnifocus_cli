@@ -1581,3 +1581,244 @@ def test_flagged_command_table_format(mock_manager):
     assert "urgent, meeting" in result.stdout
     assert "2025-02-01" in result.stdout
     assert "2025-01-15" in result.stdout
+
+
+def test_start_flow_session(manager, mock_system):
+    """Test starting a flow session."""
+    # Setup mock
+    mock_system.run_flow_command.return_value = "Flow session started"
+
+    # Call the method
+    result = manager.start_flow_session("Test Session")
+
+    # Verify the result
+    assert result == "Started flow session: Test Session"
+
+    # Verify the flow commands were called correctly
+    assert mock_system.run_flow_command.call_count == 2
+    calls = mock_system.run_flow_command.call_args_list
+
+    # First call should be flow-rename
+    assert calls[0][0] == ("flow-rename", "Test Session")
+
+    # Second call should be flow-go
+    assert calls[1][0] == ("flow-go",)
+
+
+def test_start_flow_session_with_special_characters(manager, mock_system):
+    """Test starting a flow session with special characters in name."""
+    # Setup mock
+    mock_system.run_flow_command.return_value = "Flow session started"
+
+    # Call the method with special characters
+    session_name = "Test Session: Review & Plan (2024)"
+    result = manager.start_flow_session(session_name)
+
+    # Verify the result
+    assert result == f"Started flow session: {session_name}"
+
+    # Verify the flow commands were called with the exact name
+    assert mock_system.run_flow_command.call_count == 2
+    calls = mock_system.run_flow_command.call_args_list
+
+    # First call should be flow-rename with the exact name
+    assert calls[0][0] == ("flow-rename", session_name)
+
+    # Second call should be flow-go
+    assert calls[1][0] == ("flow-go",)
+
+
+@patch("omnifocus.manager")
+def test_flow_command_success(mock_manager):
+    """Test flow command with successful execution."""
+    # Mock the methods that flow command uses
+    mock_manager.get_inbox_tasks.return_value = [
+        Task(id="1", name="Task 1", project="Inbox", flagged=False),
+    ]
+    mock_manager.get_flagged_tasks.return_value = [
+        Task(id="2", name="Task 2", project="Work", flagged=True),
+        Task(id="3", name="Flow Session Task", project="Personal", flagged=True),
+    ]
+
+    # Mock successful flow session start
+    mock_manager.start_flow_session.return_value = (
+        "Started flow session: Flow Session Task"
+    )
+
+    result = runner.invoke(app, ["flow", "3"])
+    assert result.exit_code == 0
+    assert "Started flow session: Flow Session Task" in result.stdout
+    assert "From task: Flow Session Task" in result.stdout
+
+    # Verify the flow session was started with the correct task name
+    mock_manager.start_flow_session.assert_called_once_with("Flow Session Task")
+
+
+@patch("omnifocus.manager")
+def test_flow_command_invalid_task_number(mock_manager):
+    """Test flow command with invalid task number."""
+    # Mock the methods that flow command uses
+    mock_manager.get_inbox_tasks.return_value = [
+        Task(id="1", name="Task 1", project="Inbox", flagged=False),
+    ]
+    mock_manager.get_flagged_tasks.return_value = [
+        Task(id="2", name="Task 2", project="Work", flagged=True),
+    ]
+
+    result = runner.invoke(app, ["flow", "5"])
+    assert result.exit_code == 0
+    assert "Invalid task number. Please enter a number between 1 and 2" in result.stdout
+
+    # Verify no flow session was started
+    mock_manager.start_flow_session.assert_not_called()
+
+
+@patch("omnifocus.manager")
+def test_flow_command_no_tasks(mock_manager):
+    """Test flow command when no tasks are available."""
+    # Mock empty task lists
+    mock_manager.get_inbox_tasks.return_value = []
+    mock_manager.get_flagged_tasks.return_value = []
+
+    result = runner.invoke(app, ["flow", "1"])
+    assert result.exit_code == 0
+    assert "No interesting tasks found!" in result.stdout
+
+    # Verify no flow session was started
+    mock_manager.start_flow_session.assert_not_called()
+
+
+@patch("omnifocus.manager")
+def test_flow_command_subprocess_error(mock_manager):
+    """Test flow command when subprocess fails."""
+    # Mock the methods that flow command uses
+    mock_manager.get_inbox_tasks.return_value = [
+        Task(id="1", name="Task 1", project="Inbox", flagged=False),
+    ]
+    mock_manager.get_flagged_tasks.return_value = []
+
+    # Mock subprocess error
+    import subprocess
+
+    mock_manager.start_flow_session.side_effect = subprocess.CalledProcessError(
+        1, "y flow-rename", "Command failed"
+    )
+
+    result = runner.invoke(app, ["flow", "1"])
+    assert result.exit_code == 0
+    assert "Failed to start flow session" in result.stdout
+
+    # Verify the flow session was attempted
+    mock_manager.start_flow_session.assert_called_once_with("Task 1")
+
+
+@patch("omnifocus.manager")
+def test_flow_command_file_not_found_error(mock_manager):
+    """Test flow command when 'y' command is not found."""
+    # Mock the methods that flow command uses
+    mock_manager.get_inbox_tasks.return_value = [
+        Task(id="1", name="Task 1", project="Inbox", flagged=False),
+    ]
+    mock_manager.get_flagged_tasks.return_value = []
+
+    # Mock file not found error
+    mock_manager.start_flow_session.side_effect = FileNotFoundError(
+        "y command not found"
+    )
+
+    result = runner.invoke(app, ["flow", "1"])
+    assert result.exit_code == 0
+    assert "Flow command 'y' not found" in result.stdout
+
+    # Verify the flow session was attempted
+    mock_manager.start_flow_session.assert_called_once_with("Task 1")
+
+
+@patch("omnifocus.manager")
+def test_flow_command_uses_interesting_tasks(mock_manager):
+    """Test that flow command uses the same task list as interesting command."""
+    # Mock the methods that both commands use
+    mock_manager.get_inbox_tasks.return_value = [
+        Task(id="1", name="Inbox Task", project="Inbox", flagged=False),
+    ]
+    mock_manager.get_flagged_tasks.return_value = [
+        Task(id="2", name="Flagged Task", project="Work", flagged=True),
+    ]
+
+    # Mock successful flow session start
+    mock_manager.start_flow_session.return_value = "Started flow session: Flagged Task"
+
+    result = runner.invoke(app, ["flow", "2"])
+    assert result.exit_code == 0
+    assert "Started flow session: Flagged Task" in result.stdout
+
+    # Verify both inbox and flagged tasks were fetched (same as interesting command)
+    mock_manager.get_inbox_tasks.assert_called_once()
+    mock_manager.get_flagged_tasks.assert_called_once()
+    mock_manager.start_flow_session.assert_called_once_with("Flagged Task")
+
+
+def test_osx_system_run_flow_command():
+    """Test OSXSystem.run_flow_command method."""
+    from unittest.mock import patch, MagicMock
+    from omnifocus import OSXSystem
+
+    with patch("subprocess.run") as mock_run:
+        # Setup mock
+        mock_result = MagicMock()
+        mock_result.stdout = "Flow command output\n"
+        mock_run.return_value = mock_result
+
+        # Call the method
+        result = OSXSystem.run_flow_command("flow-rename", "Test Session")
+
+        # Verify the result
+        assert result == "Flow command output"
+
+        # Verify subprocess.run was called correctly
+        mock_run.assert_called_once_with(
+            ["y", "flow-rename", "Test Session"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+
+def test_osx_system_run_flow_command_no_args():
+    """Test OSXSystem.run_flow_command method with no additional arguments."""
+    from unittest.mock import patch, MagicMock
+    from omnifocus import OSXSystem
+
+    with patch("subprocess.run") as mock_run:
+        # Setup mock
+        mock_result = MagicMock()
+        mock_result.stdout = "Flow started\n"
+        mock_run.return_value = mock_result
+
+        # Call the method
+        result = OSXSystem.run_flow_command("flow-go")
+
+        # Verify the result
+        assert result == "Flow started"
+
+        # Verify subprocess.run was called correctly
+        mock_run.assert_called_once_with(
+            ["y", "flow-go"], capture_output=True, text=True, check=True
+        )
+
+
+def test_osx_system_run_flow_command_error():
+    """Test OSXSystem.run_flow_command method when subprocess fails."""
+    from unittest.mock import patch
+    from omnifocus import OSXSystem
+    import subprocess
+
+    with patch("subprocess.run") as mock_run:
+        # Setup mock to raise CalledProcessError
+        mock_run.side_effect = subprocess.CalledProcessError(
+            1, ["y", "flow-rename"], "Command failed"
+        )
+
+        # Call the method and expect exception
+        with pytest.raises(subprocess.CalledProcessError):
+            OSXSystem.run_flow_command("flow-rename", "Test Session")
