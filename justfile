@@ -4,39 +4,28 @@ default:
 
 # Run fast tests (called by pre-commit)
 fast-test:
-    @just test
-
-# Install in virtual environment
-install:
-    uv venv
-    . .venv/bin/activate
-    uv pip install --upgrade --editable .
+    uv run pytest tests/ -v
 
 # Install globally using uv tool
-global-install: install
+global-install:
     uv tool install --force --editable  .
-
-# Install development dependencies (for contributing)
-install-dev:
-    uv pip install -e ".[dev]"
 
 # Run tests
 test:
-    pytest tests/ -v
+    uv run pytest tests/ -v
 
 # Run tests with coverage
 coverage:
-    pytest tests/ --cov=omnifocus --cov-report=term-missing
+    uv run pytest tests/ --cov=omnifocus --cov-report=term-missing
 
 # Format code
 format:
-    ruff format .
-    ruff check . --fix
+    uv run ruff format .
+    uv run ruff check . --fix
 
 # Run linting
 lint:
-    ruff check .
-    mypy omnifocus/
+    uv run ruff check .
 
 # Clean python cache files
 clean:

@@ -750,3 +750,206 @@ def test_get_all_tags(manager, mock_system):
     assert result == ["tag1", "tag2", "testing"]
     mock_system.run_javascript.assert_called_once()
     assert "flattenedTags" in mock_system.run_javascript.call_args[0][0]
+
+
+@patch("omnifocus.manager")
+def test_complete_command_no_args(mock_manager):
+    """Test complete command with no arguments shows interesting tasks."""
+    # Mock the methods that interesting command uses
+    mock_manager.get_inbox_tasks.return_value = [
+        Task(id="1", name="Task 1", project="Inbox", flagged=False),
+    ]
+    mock_manager.get_flagged_tasks.return_value = [
+        Task(id="2", name="Task 2", project="Work", flagged=True),
+    ]
+
+    result = runner.invoke(app, ["complete"])
+    assert result.exit_code == 0
+    assert "Task 1" in result.stdout
+    assert "Task 2" in result.stdout
+    mock_manager.get_inbox_tasks.assert_called()
+    mock_manager.get_flagged_tasks.assert_called()
+
+
+@patch("omnifocus.manager")
+def test_complete_command_dry_run(mock_manager):
+    """Test complete command with dry-run flag."""
+    # Mock the methods that complete command uses
+    mock_manager.get_inbox_tasks.return_value = [
+        Task(id="1", name="Task 1", project="Inbox", flagged=False),
+    ]
+    mock_manager.get_flagged_tasks.return_value = [
+        Task(id="2", name="Task 2", project="Work", flagged=True),
+        Task(id="3", name="Task 3", project="Personal", flagged=True),
+    ]
+
+    result = runner.invoke(app, ["complete", "--dry-run", "1 3"])
+    assert result.exit_code == 0
+    assert "Would complete 1: Task 1" in result.stdout
+    assert "Would complete 3: Task 3" in result.stdout
+    assert "Task 2" not in result.stdout
+
+    # Verify no tasks were actually completed
+    mock_manager.complete.assert_not_called()
+    mock_manager.get_inbox_tasks.assert_called()
+    mock_manager.get_flagged_tasks.assert_called()
+
+
+@patch("omnifocus.manager")
+def test_complete_command_actual_completion(mock_manager):
+    """Test complete command actually completing tasks."""
+    # Mock the methods that complete command uses
+    mock_manager.get_inbox_tasks.return_value = [
+        Task(id="1", name="Task 1", project="Inbox", flagged=False),
+    ]
+    mock_manager.get_flagged_tasks.return_value = [
+        Task(id="2", name="Task 2", project="Work", flagged=True),
+        Task(id="3", name="Task 3", project="Personal", flagged=True),
+    ]
+
+    # Mock successful completion
+    mock_manager.complete.return_value = "Task completed successfully"
+
+    result = runner.invoke(app, ["complete", "1 3"])
+    assert result.exit_code == 0
+    assert "✓ 1: Task 1" in result.stdout
+    assert "✓ 3: Task 3" in result.stdout
+    assert "2: Task 2" not in result.stdout
+
+    # Verify tasks were actually completed
+    assert mock_manager.complete.call_count == 2
+    completed_tasks = [call.args[0] for call in mock_manager.complete.call_args_list]
+    assert completed_tasks[0].name == "Task 1"
+    assert completed_tasks[1].name == "Task 3"
+
+
+@patch("omnifocus.manager")
+def test_complete_command_invalid_task_numbers(mock_manager):
+    """Test complete command with invalid task numbers."""
+    # Mock the methods that complete command uses
+    mock_manager.get_inbox_tasks.return_value = [
+        Task(id="1", name="Task 1", project="Inbox", flagged=False),
+    ]
+    mock_manager.get_flagged_tasks.return_value = [
+        Task(id="2", name="Task 2", project="Work", flagged=True),
+    ]
+
+    result = runner.invoke(app, ["complete", "1 5 2"])
+    assert result.exit_code == 0
+    assert "✓ 1: Task 1" in result.stdout
+    assert "✓ 2: Task 2" in result.stdout
+    assert "✗ 5: Invalid task number" in result.stdout
+
+    # Verify only valid tasks were completed
+    assert mock_manager.complete.call_count == 2
+
+
+@patch("omnifocus.manager")
+def test_complete_command_invalid_number_format(mock_manager):
+    """Test complete command with invalid number format."""
+    # Mock the methods that complete command uses
+    mock_manager.get_inbox_tasks.return_value = [
+        Task(id="1", name="Task 1", project="Inbox", flagged=False),
+    ]
+    mock_manager.get_flagged_tasks.return_value = []
+
+    result = runner.invoke(app, ["complete", "abc 1"])
+    assert result.exit_code == 0
+    assert (
+        "Invalid task numbers. Please provide space-separated integers."
+        in result.stdout
+    )
+
+    # Verify no tasks were completed due to invalid format
+    mock_manager.complete.assert_not_called()
+
+
+@patch("omnifocus.manager")
+def test_complete_command_completion_error(mock_manager):
+    """Test complete command when task completion fails."""
+    # Mock the methods that complete command uses
+    mock_manager.get_inbox_tasks.return_value = [
+        Task(id="1", name="Task 1", project="Inbox", flagged=False),
+    ]
+    mock_manager.get_flagged_tasks.return_value = [
+        Task(id="2", name="Task 2", project="Work", flagged=True),
+    ]
+
+    # Mock completion failure for first task, success for second
+    mock_manager.complete.side_effect = [Exception("Completion failed"), "Success"]
+
+    result = runner.invoke(app, ["complete", "1 2"])
+    assert result.exit_code == 0
+    assert "✗ 1: Task 1 - Completion failed" in result.stdout
+    assert "✓ 2: Task 2" in result.stdout
+
+    # Verify both tasks were attempted
+    assert mock_manager.complete.call_count == 2
+
+
+@patch("omnifocus.manager")
+def test_complete_command_dry_run_invalid_numbers(mock_manager):
+    """Test complete command dry-run with invalid task numbers."""
+    # Mock the methods that complete command uses
+    mock_manager.get_inbox_tasks.return_value = [
+        Task(id="1", name="Task 1", project="Inbox", flagged=False),
+    ]
+    mock_manager.get_flagged_tasks.return_value = [
+        Task(id="2", name="Task 2", project="Work", flagged=True),
+    ]
+
+    result = runner.invoke(app, ["complete", "--dry-run", "1 5 2"])
+    assert result.exit_code == 0
+    assert "Would complete 1: Task 1" in result.stdout
+    assert "Would complete 2: Task 2" in result.stdout
+    assert "✗ 5: Invalid task number" in result.stdout
+
+    # Verify no tasks were completed in dry-run
+    mock_manager.complete.assert_not_called()
+
+
+@patch("omnifocus.manager")
+def test_complete_command_uses_interesting_tasks(mock_manager):
+    """Test that complete command uses the same task list as interesting command."""
+    # Mock the methods that both interesting and complete commands use
+    mock_manager.get_inbox_tasks.return_value = [
+        Task(id="1", name="Inbox Task", project="Inbox", flagged=False),
+    ]
+    mock_manager.get_flagged_tasks.return_value = [
+        Task(id="2", name="Flagged Task", project="Work", flagged=True),
+    ]
+    mock_manager.get_all_tasks.return_value = [
+        Task(id="1", name="Inbox Task", project="Inbox", flagged=False),
+        Task(id="2", name="Flagged Task", project="Work", flagged=True),
+        Task(id="3", name="Non-interesting Task", project="Someday", flagged=False),
+    ]
+
+    # Test that complete command uses inbox+flagged tasks, not all tasks
+    result = runner.invoke(app, ["complete", "--dry-run", "1 2"])
+    assert result.exit_code == 0
+    assert "Inbox Task" in result.stdout
+    assert "Flagged Task" in result.stdout
+    assert "Non-interesting Task" not in result.stdout
+
+    # Verify it called get_inbox_tasks and get_flagged_tasks, not get_all_tasks
+    mock_manager.get_inbox_tasks.assert_called()
+    mock_manager.get_flagged_tasks.assert_called()
+    mock_manager.get_all_tasks.assert_not_called()
+
+
+@patch("omnifocus.manager")
+def test_complete_command_empty_task_list(mock_manager):
+    """Test complete command when no interesting tasks exist."""
+    # Mock empty task lists
+    mock_manager.get_inbox_tasks.return_value = []
+    mock_manager.get_flagged_tasks.return_value = []
+
+    result = runner.invoke(app, ["complete"])
+    assert result.exit_code == 0
+    assert "No interesting tasks found" in result.stdout
+
+    # Test with task numbers when no tasks exist
+    result = runner.invoke(app, ["complete", "1 2"])
+    assert result.exit_code == 0
+    assert "✗ 1: Invalid task number" in result.stdout
+    assert "✗ 2: Invalid task number" in result.stdout

@@ -23,7 +23,7 @@ import re
 import json
 from enum import Enum
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from datetime import datetime
 import requests
 from bs4 import BeautifulSoup
@@ -1280,10 +1280,8 @@ def test_append_pydantic():
         print("✗ Failed to append text to task note using Pydantic Task object")
 
 
-@app.command()
-def interesting():
-    """Show numbered list of inbox and flagged tasks"""
-    # Get both inbox and flagged tasks
+def _get_interesting_tasks() -> List[Tuple[str, Task]]:
+    """Get deduplicated list of inbox and flagged tasks with their sources."""
     inbox_tasks = manager.get_inbox_tasks()
     flagged_tasks = manager.get_flagged_tasks()
 
@@ -1302,6 +1300,14 @@ def interesting():
         if task.name.lower() not in seen_names:
             seen_names.add(task.name.lower())
             all_tasks.append(("Flagged", task))
+
+    return all_tasks
+
+
+@app.command()
+def interesting():
+    """Show numbered list of inbox and flagged tasks"""
+    all_tasks = _get_interesting_tasks()
 
     if not all_tasks:
         print("\nNo interesting tasks found!")
@@ -1370,13 +1376,19 @@ def test_complete():
 
 @app.command()
 def complete(
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            "--dry-run", help="Show what would be completed without actually completing"
+        ),
+    ] = False,
     task_nums: Annotated[
         str, typer.Argument(help="Space separated list of task numbers to complete")
     ] = "",
 ):
     """List interesting tasks and complete specified task numbers."""
-    # Get all tasks
-    tasks = manager.get_all_tasks()
+    # Get the same task list as the interesting command
+    all_tasks = _get_interesting_tasks()
 
     # If no task numbers provided, just list tasks
     if not task_nums:
@@ -1394,20 +1406,27 @@ def complete(
     completed = []
     errors = []
     for num in nums:
-        if num < 1 or num > len(tasks):
+        if num < 1 or num > len(all_tasks):
             errors.append(f"✗ {num}: Invalid task number")
             continue
 
-        selected_task = tasks[num - 1]
-        try:
-            manager.complete(selected_task)
-            completed.append(f"✓ {num}: {selected_task.name}")
-        except Exception as e:
-            errors.append(f"✗ {num}: {selected_task.name} - {str(e)}")
+        source, selected_task = all_tasks[num - 1]
+
+        if dry_run:
+            completed.append(f"Would complete {num}: {selected_task.name} ({source})")
+        else:
+            try:
+                manager.complete(selected_task)
+                completed.append(f"✓ {num}: {selected_task.name}")
+            except Exception as e:
+                errors.append(f"✗ {num}: {selected_task.name} - {str(e)}")
 
     # Show results
     if completed:
-        typer.echo("\nCompleted tasks:")
+        if dry_run:
+            typer.echo("\nDry run - would complete:")
+        else:
+            typer.echo("\nCompleted tasks:")
         for msg in completed:
             typer.echo(msg)
 
