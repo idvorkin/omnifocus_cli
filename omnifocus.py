@@ -1,15 +1,15 @@
 #!uv run
 # /// script
-# requires-python = ">=3.8"
+# requires-python = ">=3.12"
 # dependencies = [
-#     "typer>=0.9.0",
-#     "icecream>=2.1.3",
-#     "pyperclip>=1.8.2",
-#     "typing-extensions>=4.8.0",
-#     "pydantic>=2.5.0",
-#     "beautifulsoup4>=4.12.0",
-#     "requests>=2.31.0",
-#     "rich>=13.7.0",
+#     "typer[all]",
+#     "icecream",
+#     "pyperclip",
+#     "typing-extensions",
+#     "pydantic",
+#     "beautifulsoup4",
+#     "requests",
+#     "rich",
 # ]
 # ///
 
