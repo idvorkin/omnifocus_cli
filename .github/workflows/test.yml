@@ -1,0 +1,84 @@
+name: Tests
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12.x"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install dependencies
+        run: |
+          uv sync
+
+      - name: Run linting
+        run: |
+          uv run ruff check .
+
+      - name: Run tests with pytest
+        id: pytest
+        run: |
+          uv run pytest tests/ --verbose --tb=short --junit-xml=pytest.xml | tee pytest_output.txt
+
+      - name: Publish test results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: |
+            pytest.xml
+          comment_mode: always
+
+      - name: Generate test summary
+        if: always()
+        run: |
+          if [ -f pytest.xml ]; then
+            # Extract test counts from pytest XML
+            TESTS=$(grep -o 'tests="[0-9]*"' pytest.xml | head -1 | sed 's/tests="\([0-9]*\)"/\1/')
+            FAILURES=$(grep -o 'failures="[0-9]*"' pytest.xml | head -1 | sed 's/failures="\([0-9]*\)"/\1/')
+            ERRORS=$(grep -o 'errors="[0-9]*"' pytest.xml | head -1 | sed 's/errors="\([0-9]*\)"/\1/')
+            
+            # Default to 0 if not found
+            TESTS=${TESTS:-0}
+            FAILURES=${FAILURES:-0}
+            ERRORS=${ERRORS:-0}
+            
+            PASSED=$((TESTS - FAILURES - ERRORS))
+            
+            if [ $((FAILURES + ERRORS)) -eq 0 ]; then
+              TEST_STATUS="$PASSED/$TESTS passing"
+              echo "✅ All tests passed: $TEST_STATUS"
+            else
+              TEST_STATUS="$PASSED/$TESTS passing"
+              echo "❌ Some tests failed: $TEST_STATUS"
+            fi
+          else
+            echo "❌ No test results found"
+          fi
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            pytest.xml
+            pytest_output.txt 
