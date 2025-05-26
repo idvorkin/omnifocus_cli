@@ -2,9 +2,19 @@
 default:
     @just --list
 
-# Install globally using pipxu
+# Run fast tests (called by pre-commit)
+fast-test:
+    @echo "0/0 tests passed - Add tests"
+
+# Install in virtual environment
 install:
-    pipxu install -e -f .
+    uv venv
+    . .venv/bin/activate
+    uv pip install --upgrade --editable .
+
+# Install globally using uv tool
+global-install: install
+    uv tool install --force --editable  .
 
 # Install development dependencies (for contributing)
 install-dev:
