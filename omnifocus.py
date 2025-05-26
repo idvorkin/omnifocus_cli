@@ -35,6 +35,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 from rich import box
+import shlex
 
 
 # Create a custom theme for consistent colors
@@ -124,8 +125,16 @@ class OSXSystem:
         Raises:
             subprocess.CalledProcessError: If the command fails
         """
-        cmd = ["y", command] + list(args)
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        # Use shell=True with proper escaping for arguments that might contain special characters
+        if args:
+            escaped_args = [shlex.quote(arg) for arg in args]
+            cmd_str = f"y {command} {' '.join(escaped_args)}"
+        else:
+            cmd_str = f"y {command}"
+
+        result = subprocess.run(
+            cmd_str, shell=True, capture_output=True, text=True, check=True
+        )
         return result.stdout.strip()
 
 
@@ -569,11 +578,8 @@ class OmniFocusManager:
         Raises:
             subprocess.CalledProcessError: If flow commands fail
         """
-        # First rename the flow session
+        # Rename the flow session (flow-go happens automatically)
         self.system.run_flow_command("flow-rename", session_name)
-
-        # Then start the flow session
-        self.system.run_flow_command("flow-go")
 
         return f"Started flow session: {session_name}"
 
@@ -1823,7 +1829,7 @@ def flow(
         if dry_run:
             console.print("\n[info]Dry run - would execute:[/]")
             console.print(f"  y flow-rename '{final_session_name}'")
-            console.print("  y flow-go")
+            console.print("  (flow-go happens automatically)")
             console.print(
                 f"\n[success]✓ Would start flow session:[/] [bold]{final_session_name}[/]"
             )

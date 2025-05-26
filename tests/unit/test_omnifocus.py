@@ -39,6 +39,7 @@ from omnifocus import (
     OmniFocusManager,
     OSXSystem,
 )
+import shlex
 
 # Create mock system and manager for all tests
 mock_system = MagicMock(spec=OSXSystem)
@@ -1594,15 +1595,9 @@ def test_start_flow_session(manager, mock_system):
     # Verify the result
     assert result == "Started flow session: Test Session"
 
-    # Verify the flow commands were called correctly
-    assert mock_system.run_flow_command.call_count == 2
-    calls = mock_system.run_flow_command.call_args_list
-
-    # First call should be flow-rename
-    assert calls[0][0] == ("flow-rename", "Test Session")
-
-    # Second call should be flow-go
-    assert calls[1][0] == ("flow-go",)
+    # Verify only flow-rename was called (flow-go happens automatically)
+    assert mock_system.run_flow_command.call_count == 1
+    mock_system.run_flow_command.assert_called_once_with("flow-rename", "Test Session")
 
 
 def test_start_flow_session_with_special_characters(manager, mock_system):
@@ -1617,15 +1612,9 @@ def test_start_flow_session_with_special_characters(manager, mock_system):
     # Verify the result
     assert result == f"Started flow session: {session_name}"
 
-    # Verify the flow commands were called with the exact name
-    assert mock_system.run_flow_command.call_count == 2
-    calls = mock_system.run_flow_command.call_args_list
-
-    # First call should be flow-rename with the exact name
-    assert calls[0][0] == ("flow-rename", session_name)
-
-    # Second call should be flow-go
-    assert calls[1][0] == ("flow-go",)
+    # Verify only flow-rename was called with the exact name (flow-go happens automatically)
+    assert mock_system.run_flow_command.call_count == 1
+    mock_system.run_flow_command.assert_called_once_with("flow-rename", session_name)
 
 
 @patch("omnifocus.interactive_edit_session_name")
@@ -1793,9 +1782,10 @@ def test_osx_system_run_flow_command():
         # Verify the result
         assert result == "Flow command output"
 
-        # Verify subprocess.run was called correctly
+        # Verify subprocess.run was called correctly with shell=True and proper escaping
         mock_run.assert_called_once_with(
-            ["y", "flow-rename", "Test Session"],
+            "y flow-rename 'Test Session'",
+            shell=True,
             capture_output=True,
             text=True,
             check=True,
@@ -1819,9 +1809,9 @@ def test_osx_system_run_flow_command_no_args():
         # Verify the result
         assert result == "Flow started"
 
-        # Verify subprocess.run was called correctly
+        # Verify subprocess.run was called correctly with shell=True
         mock_run.assert_called_once_with(
-            ["y", "flow-go"], capture_output=True, text=True, check=True
+            "y flow-go", shell=True, capture_output=True, text=True, check=True
         )
 
 
@@ -1840,6 +1830,50 @@ def test_osx_system_run_flow_command_error():
         # Call the method and expect exception
         with pytest.raises(subprocess.CalledProcessError):
             OSXSystem.run_flow_command("flow-rename", "Test Session")
+
+
+def test_osx_system_run_flow_command_special_characters():
+    """Test OSXSystem.run_flow_command method with special characters that need escaping."""
+    from unittest.mock import patch, MagicMock
+    from omnifocus import OSXSystem
+
+    with patch("subprocess.run") as mock_run:
+        # Setup mock
+        mock_result = MagicMock()
+        mock_result.stdout = "Flow command output\n"
+        mock_run.return_value = mock_result
+
+        # Test with various special characters that could cause issues
+        test_cases = [
+            "Session with spaces",
+            "Session with 'single quotes'",
+            'Session with "double quotes"',
+            "Session with (parentheses)",
+            "Session with & ampersand",
+            "Session with $dollar sign",
+            "Session with `backticks`",
+            "Session with | pipe",
+            "Session with ; semicolon",
+        ]
+
+        for session_name in test_cases:
+            mock_run.reset_mock()
+
+            # Call the method
+            result = OSXSystem.run_flow_command("flow-rename", session_name)
+
+            # Verify the result
+            assert result == "Flow command output"
+
+            # Verify subprocess.run was called with properly escaped arguments
+            expected_cmd = f"y flow-rename {shlex.quote(session_name)}"
+            mock_run.assert_called_once_with(
+                expected_cmd,
+                shell=True,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
 
 
 # Tests for new LLM functionality
