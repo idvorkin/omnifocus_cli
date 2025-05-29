@@ -1267,7 +1267,6 @@ def test_tag(
         print("✓ Successfully cleared all tags from task")
     else:
         print("✗ Failed to clear all tags from task")
-        # Continue anyway to try the next steps
 
     # Verify tags were cleared
     time.sleep(1)  # Brief pause to ensure OmniFocus has time to process
@@ -1584,6 +1583,43 @@ def _validate_task_number(num: int, max_tasks: int) -> bool:
     return 1 <= num <= max_tasks
 
 
+def _get_tasks_for_completion(
+    task_nums_str: str,
+) -> Optional[List[Tuple[int, str, Task]]]:
+    """Parse task numbers and get corresponding task objects upfront.
+
+    Args:
+        task_nums_str: Space-separated task numbers
+
+    Returns:
+        List of (task_num, source, task) tuples or None if invalid
+    """
+    nums = _parse_task_numbers(task_nums_str)
+    if nums is None:
+        typer.echo(INVALID_TASK_NUMBERS_ERROR)
+        return None
+
+    all_interesting_tasks = _get_interesting_tasks()
+    if not all_interesting_tasks:
+        typer.echo(NO_TASKS_FOUND_ERROR)
+        return None
+
+    max_tasks = len(all_interesting_tasks)
+    tasks_to_complete = []
+
+    for num in nums:
+        if not _validate_task_number(num, max_tasks):
+            typer.echo(
+                f"✗ Invalid task number {num}. Please enter a number between 1 and {max_tasks}"
+            )
+            return None
+
+        source, task = all_interesting_tasks[num - 1]
+        tasks_to_complete.append((num, source, task))
+
+    return tasks_to_complete
+
+
 @app.command()
 def complete(
     dry_run: Annotated[
@@ -1592,54 +1628,72 @@ def complete(
             "--dry-run", help="Show what would be completed without actually completing"
         ),
     ] = False,
+    no_confirm: Annotated[
+        bool,
+        typer.Option(
+            "--no-confirm",
+            help="Skip confirmation prompts when completing multiple tasks",
+        ),
+    ] = False,
     task_nums: Annotated[
         str, typer.Argument(help="Space separated list of task numbers to complete")
     ] = "",
 ):
-    """List interesting tasks and complete specified task numbers."""
+    """List interesting tasks and complete specified task numbers.
+
+    When completing multiple tasks, each task will be shown with a confirmation
+    prompt before completion. Use --no-confirm to skip prompts for automation.
+    Single task completion never requires confirmation.
+    """
     # Early return if no task numbers provided
     if not task_nums:
         interesting()
         return
 
-    # Parse and validate task numbers
-    nums = _parse_task_numbers(task_nums)
-    if nums is None:
-        typer.echo(INVALID_TASK_NUMBERS_ERROR)
+    # Get and validate all tasks upfront to prevent task number shifting
+    tasks_to_complete = _get_tasks_for_completion(task_nums)
+    if tasks_to_complete is None:
         return
 
-    # Process each task number
-    completed = []
-    errors = []
+    single_task = len(tasks_to_complete) == 1
+    completed, errors, skipped = [], [], []
 
-    for num in nums:
+    for num, source, task in tasks_to_complete:
+        if dry_run:
+            completed.append(f"Would complete {num}: {task.name} ({source})")
+            continue
+
+        # Show confirmation for multi-task operations unless explicitly disabled
+        if not single_task and not no_confirm:
+            typer.echo(f"\nTask {num}: {task.name}")
+            typer.echo(f"Project: {task.project}")
+            if task.tags:
+                typer.echo(f"Tags: {', '.join(task.tags)}")
+
+            try:
+                if not typer.confirm("Complete this task?"):
+                    skipped.append(f"⏭ {num}: {task.name} (skipped)")
+                    continue
+            except (KeyboardInterrupt, typer.Abort):
+                typer.echo("\nOperation cancelled")
+                return
+
         try:
-            source, selected_task = _get_task_by_number(num)
-
-            if dry_run:
-                completed.append(
-                    f"Would complete {num}: {selected_task.name} ({source})"
-                )
-            else:
-                try:
-                    manager.complete(selected_task)
-                    completed.append(f"✓ {num}: {selected_task.name}")
-                except Exception as e:
-                    errors.append(f"✗ {num}: {selected_task.name} - {str(e)}")
-        except ValueError as e:
-            errors.append(f"✗ {num}: {str(e)}")
+            manager.complete(task)
+            completed.append(f"✓ {num}: {task.name}")
+        except Exception as e:
+            errors.append(f"✗ {num}: {task.name} - {str(e)}")
 
     # Display results
-    if completed:
-        header = "\nDry run - would complete:" if dry_run else "\nCompleted tasks:"
-        typer.echo(header)
-        for msg in completed:
-            typer.echo(msg)
-
-    if errors:
-        typer.echo("\nErrors:")
-        for msg in errors:
-            typer.echo(msg)
+    for results, header in [
+        (completed, "\nDry run - would complete:" if dry_run else "\nCompleted tasks:"),
+        (skipped, "\nSkipped tasks:"),
+        (errors, "\nErrors:"),
+    ]:
+        if results:
+            typer.echo(header)
+            for msg in results:
+                typer.echo(msg)
 
 
 @app.command(name="list-tags")

@@ -838,7 +838,7 @@ def test_complete_command_actual_completion(mock_manager):
     # Mock successful completion
     mock_manager.complete.return_value = "Task completed successfully"
 
-    result = runner.invoke(app, ["complete", "1 3"])
+    result = runner.invoke(app, ["complete", "--no-confirm", "1 3"])
     assert result.exit_code == 0
     assert "✓ 1: Task 1" in result.stdout
     assert "✓ 3: Task 3" in result.stdout
@@ -864,12 +864,14 @@ def test_complete_command_invalid_task_numbers(mock_manager):
 
     result = runner.invoke(app, ["complete", "1 5 2"])
     assert result.exit_code == 0
-    assert "✓ 1: Task 1" in result.stdout
-    assert "✓ 2: Task 2" in result.stdout
-    assert "✗ 5: Invalid task number" in result.stdout
+    # With new validation, invalid task numbers cause early failure
+    assert (
+        "✗ Invalid task number 5. Please enter a number between 1 and 2"
+        in result.stdout
+    )
 
-    # Verify only valid tasks were completed
-    assert mock_manager.complete.call_count == 2
+    # Verify no tasks were completed due to validation failure
+    mock_manager.complete.assert_not_called()
 
 
 @patch("omnifocus.manager")
@@ -906,7 +908,7 @@ def test_complete_command_completion_error(mock_manager):
     # Mock completion failure for first task, success for second
     mock_manager.complete.side_effect = [Exception("Completion failed"), "Success"]
 
-    result = runner.invoke(app, ["complete", "1 2"])
+    result = runner.invoke(app, ["complete", "--no-confirm", "1 2"])
     assert result.exit_code == 0
     assert "✗ 1: Task 1 - Completion failed" in result.stdout
     assert "✓ 2: Task 2" in result.stdout
@@ -928,11 +930,13 @@ def test_complete_command_dry_run_invalid_numbers(mock_manager):
 
     result = runner.invoke(app, ["complete", "--dry-run", "1 5 2"])
     assert result.exit_code == 0
-    assert "Would complete 1: Task 1" in result.stdout
-    assert "Would complete 2: Task 2" in result.stdout
-    assert "✗ 5: Invalid task number" in result.stdout
+    # With new validation, invalid task numbers cause early failure even in dry-run
+    assert (
+        "✗ Invalid task number 5. Please enter a number between 1 and 2"
+        in result.stdout
+    )
 
-    # Verify no tasks were completed in dry-run
+    # Verify no tasks were completed in dry-run due to validation failure
     mock_manager.complete.assert_not_called()
 
 
@@ -2161,3 +2165,229 @@ def test_flow_command_dry_run_with_llm(
 
     # Verify no actual flow command was executed in dry run mode
     mock_system.run_flow_command.assert_not_called()
+
+
+# New tests for the enhanced complete command functionality
+def test_get_tasks_for_completion_helper():
+    """Test the _get_tasks_for_completion helper function."""
+    from omnifocus import _get_tasks_for_completion
+
+    # Test with None input
+    result = _get_tasks_for_completion("")
+    assert result is None
+
+    # Test with invalid format
+    with patch("omnifocus.typer.echo") as mock_echo:
+        result = _get_tasks_for_completion("abc def")
+        assert result is None
+        mock_echo.assert_called_with(
+            "Invalid task numbers. Please provide space-separated integers."
+        )
+
+
+@patch("omnifocus.manager")
+def test_get_tasks_for_completion_no_tasks(mock_manager):
+    """Test _get_tasks_for_completion when no tasks exist."""
+    from omnifocus import _get_tasks_for_completion
+
+    mock_manager.get_inbox_tasks.return_value = []
+    mock_manager.get_flagged_tasks.return_value = []
+
+    with patch("omnifocus.typer.echo") as mock_echo:
+        result = _get_tasks_for_completion("1 2")
+        assert result is None
+        mock_echo.assert_called_with("No interesting tasks found!")
+
+
+@patch("omnifocus.manager")
+def test_get_tasks_for_completion_invalid_numbers(mock_manager):
+    """Test _get_tasks_for_completion with invalid task numbers."""
+    from omnifocus import _get_tasks_for_completion, Task
+
+    mock_manager.get_inbox_tasks.return_value = [
+        Task(id="1", name="Task 1", project="Inbox", flagged=False),
+    ]
+    mock_manager.get_flagged_tasks.return_value = []
+
+    with patch("omnifocus.typer.echo") as mock_echo:
+        result = _get_tasks_for_completion("1 5")
+        assert result is None
+        mock_echo.assert_called_with(
+            "✗ Invalid task number 5. Please enter a number between 1 and 1"
+        )
+
+
+@patch("omnifocus.manager")
+def test_get_tasks_for_completion_success(mock_manager):
+    """Test _get_tasks_for_completion with valid input."""
+    from omnifocus import _get_tasks_for_completion, Task
+
+    task1 = Task(id="1", name="Task 1", project="Inbox", flagged=False)
+    task2 = Task(id="2", name="Task 2", project="Work", flagged=True)
+
+    mock_manager.get_inbox_tasks.return_value = [task1]
+    mock_manager.get_flagged_tasks.return_value = [task2]
+
+    result = _get_tasks_for_completion("1 2")
+    assert result is not None
+    assert len(result) == 2
+    assert result[0] == (1, "Inbox", task1)
+    assert result[1] == (2, "Flagged", task2)
+
+
+@patch("omnifocus.manager")
+def test_complete_command_no_confirm_flag(mock_manager):
+    """Test complete command with --no-confirm flag skips confirmation."""
+    mock_manager.get_inbox_tasks.return_value = [
+        Task(id="1", name="Task 1", project="Inbox", flagged=False),
+        Task(id="2", name="Task 2", project="Inbox", flagged=False),
+    ]
+    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.complete.return_value = "Task completed successfully"
+
+    result = runner.invoke(app, ["complete", "--no-confirm", "1 2"])
+    assert result.exit_code == 0
+    assert "✓ 1: Task 1" in result.stdout
+    assert "✓ 2: Task 2" in result.stdout
+    assert "Complete this task?" not in result.stdout
+
+    # Verify both tasks were completed
+    assert mock_manager.complete.call_count == 2
+
+
+@patch("omnifocus.manager")
+@patch("omnifocus.typer.confirm")
+def test_complete_command_with_confirmation_accept(mock_confirm, mock_manager):
+    """Test complete command with confirmation prompts - user accepts."""
+    mock_manager.get_inbox_tasks.return_value = [
+        Task(id="1", name="Task 1", project="Inbox", flagged=False),
+        Task(id="2", name="Task 2", project="Inbox", flagged=False),
+    ]
+    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.complete.return_value = "Task completed successfully"
+    mock_confirm.return_value = True  # User accepts all confirmations
+
+    result = runner.invoke(app, ["complete", "1 2"])
+    assert result.exit_code == 0
+    assert "✓ 1: Task 1" in result.stdout
+    assert "✓ 2: Task 2" in result.stdout
+
+    # Verify both tasks were completed and confirmation was called twice
+    assert mock_manager.complete.call_count == 2
+    assert mock_confirm.call_count == 2
+
+
+@patch("omnifocus.manager")
+@patch("omnifocus.typer.confirm")
+def test_complete_command_with_confirmation_reject(mock_confirm, mock_manager):
+    """Test complete command with confirmation prompts - user rejects some."""
+    mock_manager.get_inbox_tasks.return_value = [
+        Task(id="1", name="Task 1", project="Inbox", flagged=False),
+        Task(id="2", name="Task 2", project="Inbox", flagged=False),
+    ]
+    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.complete.return_value = "Task completed successfully"
+    mock_confirm.side_effect = [True, False]  # Accept first, reject second
+
+    result = runner.invoke(app, ["complete", "1 2"])
+    assert result.exit_code == 0
+    assert "✓ 1: Task 1" in result.stdout
+    assert "⏭ 2: Task 2 (skipped)" in result.stdout
+
+    # Verify only first task was completed
+    assert mock_manager.complete.call_count == 1
+    assert mock_confirm.call_count == 2
+
+
+@patch("omnifocus.manager")
+@patch("omnifocus.typer.confirm")
+def test_complete_command_confirmation_keyboard_interrupt(mock_confirm, mock_manager):
+    """Test complete command when user cancels with Ctrl+C during confirmation."""
+    mock_manager.get_inbox_tasks.return_value = [
+        Task(id="1", name="Task 1", project="Inbox", flagged=False),
+        Task(id="2", name="Task 2", project="Inbox", flagged=False),
+    ]
+    mock_manager.get_flagged_tasks.return_value = []
+    mock_confirm.side_effect = KeyboardInterrupt()
+
+    result = runner.invoke(app, ["complete", "1 2"])
+    assert result.exit_code == 0
+    assert "Operation cancelled" in result.stdout
+
+    # Verify no tasks were completed
+    mock_manager.complete.assert_not_called()
+
+
+@patch("omnifocus.manager")
+def test_complete_command_single_task_no_confirmation(mock_manager):
+    """Test that single task completion never requires confirmation."""
+    mock_manager.get_inbox_tasks.return_value = [
+        Task(id="1", name="Task 1", project="Inbox", flagged=False),
+    ]
+    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.complete.return_value = "Task completed successfully"
+
+    with patch("omnifocus.typer.confirm") as mock_confirm:
+        result = runner.invoke(app, ["complete", "1"])
+        assert result.exit_code == 0
+        assert "✓ 1: Task 1" in result.stdout
+
+        # Verify no confirmation was requested for single task
+        mock_confirm.assert_not_called()
+        mock_manager.complete.assert_called_once()
+
+
+@patch("omnifocus.manager")
+def test_complete_command_task_number_stability(mock_manager):
+    """Test that task numbers remain stable during multi-completion."""
+    # Create tasks that will be completed in order 1, 3, 2
+    # This tests that we get task objects upfront to prevent number shifting
+    task1 = Task(id="1", name="Task 1", project="Inbox", flagged=False)
+    task2 = Task(id="2", name="Task 2", project="Work", flagged=True)
+    task3 = Task(id="3", name="Task 3", project="Personal", flagged=True)
+
+    mock_manager.get_inbox_tasks.return_value = [task1]
+    mock_manager.get_flagged_tasks.return_value = [task2, task3]
+    mock_manager.complete.return_value = "Task completed successfully"
+
+    result = runner.invoke(app, ["complete", "--no-confirm", "1 3 2"])
+    assert result.exit_code == 0
+
+    # Verify the correct tasks were completed in the order specified by user
+    assert "✓ 1: Task 1" in result.stdout
+    assert "✓ 3: Task 3" in result.stdout
+    assert "✓ 2: Task 2" in result.stdout
+
+    # Verify all three tasks were completed
+    assert mock_manager.complete.call_count == 3
+    completed_tasks = [call.args[0] for call in mock_manager.complete.call_args_list]
+    assert completed_tasks[0].name == "Task 1"  # First completion
+    assert completed_tasks[1].name == "Task 3"  # Second completion
+    assert completed_tasks[2].name == "Task 2"  # Third completion
+
+
+@patch("omnifocus.manager")
+def test_complete_command_confirmation_shows_task_details(mock_manager):
+    """Test that confirmation prompts show task details."""
+    task_with_tags = Task(
+        id="1",
+        name="Important Task",
+        project="Work",
+        flagged=False,
+        tags=["urgent", "meeting"],
+    )
+
+    mock_manager.get_inbox_tasks.return_value = [task_with_tags]
+    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.complete.return_value = "Task completed successfully"
+
+    with patch("omnifocus.typer.confirm", return_value=True):
+        result = runner.invoke(
+            app, ["complete", "1 1"]
+        )  # Same task twice to trigger confirmation
+        assert result.exit_code == 0
+
+        # Check that task details are shown in confirmation
+        assert "Task 1: Important Task" in result.stdout
+        assert "Project: Work" in result.stdout
+        assert "Tags: urgent, meeting" in result.stdout
