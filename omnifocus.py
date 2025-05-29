@@ -1800,7 +1800,7 @@ def flow(
         ),
     ] = False,
 ):
-    """Start a flow session with LLM-shortened task name and interactive editing."""
+    """Start a flow session with task name using flow-go directly."""
     try:
         source, selected_task = _get_task_by_number(task_num)
 
@@ -1828,16 +1828,16 @@ def flow(
         # Show what would happen in dry run mode
         if dry_run:
             console.print("\n[info]Dry run - would execute:[/]")
-            console.print(f"  y flow-rename '{final_session_name}'")
-            console.print("  (flow-go happens automatically)")
+            console.print(f"  y flow-go '{final_session_name}'")
             console.print(
                 f"\n[success]✓ Would start flow session:[/] [bold]{final_session_name}[/]"
             )
             console.print(f"  [info]From task:[/] {selected_task.name}")
             return
 
-        # Start the flow session using the global manager
-        result = manager.start_flow_session(final_session_name)
+        # Execute the flow command using flow-go directly
+        system.run_flow_command("flow-go", final_session_name)
+        result = f"Started flow session: {final_session_name}"
 
         console.print(f"\n[green]✓[/] {result}")
         console.print(f"  [info]From task:[/] {selected_task.name}")

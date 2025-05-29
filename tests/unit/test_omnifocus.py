@@ -1618,8 +1618,9 @@ def test_start_flow_session_with_special_characters(manager, mock_system):
 
 
 @patch("omnifocus.interactive_edit_session_name")
+@patch("omnifocus.system")
 @patch("omnifocus.manager")
-def test_flow_command_success(mock_manager, mock_interactive_edit):
+def test_flow_command_success(mock_manager, mock_system, mock_interactive_edit):
     """Test flow command with successful execution."""
     # Mock the methods that flow command uses
     mock_manager.get_inbox_tasks.return_value = [
@@ -1633,18 +1634,16 @@ def test_flow_command_success(mock_manager, mock_interactive_edit):
     # Mock interactive editing to return the original name
     mock_interactive_edit.return_value = "Flow Session Task"
 
-    # Mock successful flow session start
-    mock_manager.start_flow_session.return_value = (
-        "Started flow session: Flow Session Task"
-    )
+    # Mock successful flow command execution
+    mock_system.run_flow_command.return_value = "Flow command output"
 
     result = runner.invoke(app, ["flow", "3", "--no-shorten"])
     assert result.exit_code == 0
     assert "Started flow session: Flow Session Task" in result.stdout
     assert "From task: Flow Session Task" in result.stdout
 
-    # Verify the flow session was started with the correct task name
-    mock_manager.start_flow_session.assert_called_once_with("Flow Session Task")
+    # Verify the flow command was called with flow-go directly
+    mock_system.run_flow_command.assert_called_once_with("flow-go", "Flow Session Task")
     # Verify interactive editing was called
     mock_interactive_edit.assert_called_once_with("Flow Session Task")
 
@@ -1684,8 +1683,11 @@ def test_flow_command_no_tasks(mock_manager):
 
 
 @patch("omnifocus.interactive_edit_session_name")
+@patch("omnifocus.system")
 @patch("omnifocus.manager")
-def test_flow_command_subprocess_error(mock_manager, mock_interactive_edit):
+def test_flow_command_subprocess_error(
+    mock_manager, mock_system, mock_interactive_edit
+):
     """Test flow command when subprocess fails."""
     # Mock the methods that flow command uses
     mock_manager.get_inbox_tasks.return_value = [
@@ -1699,21 +1701,24 @@ def test_flow_command_subprocess_error(mock_manager, mock_interactive_edit):
     # Mock subprocess error
     import subprocess
 
-    mock_manager.start_flow_session.side_effect = subprocess.CalledProcessError(
-        1, "y flow-rename", "Command failed"
+    mock_system.run_flow_command.side_effect = subprocess.CalledProcessError(
+        1, "y flow-go", "Command failed"
     )
 
     result = runner.invoke(app, ["flow", "1", "--no-shorten"])
     assert result.exit_code == 0
     assert "Failed to start flow session" in result.stdout
 
-    # Verify the flow session was attempted
-    mock_manager.start_flow_session.assert_called_once_with("Task 1")
+    # Verify the flow command was attempted with flow-go
+    mock_system.run_flow_command.assert_called_once_with("flow-go", "Task 1")
 
 
 @patch("omnifocus.interactive_edit_session_name")
+@patch("omnifocus.system")
 @patch("omnifocus.manager")
-def test_flow_command_file_not_found_error(mock_manager, mock_interactive_edit):
+def test_flow_command_file_not_found_error(
+    mock_manager, mock_system, mock_interactive_edit
+):
     """Test flow command when 'y' command is not found."""
     # Mock the methods that flow command uses
     mock_manager.get_inbox_tasks.return_value = [
@@ -1725,21 +1730,22 @@ def test_flow_command_file_not_found_error(mock_manager, mock_interactive_edit):
     mock_interactive_edit.return_value = "Task 1"
 
     # Mock file not found error
-    mock_manager.start_flow_session.side_effect = FileNotFoundError(
-        "y command not found"
-    )
+    mock_system.run_flow_command.side_effect = FileNotFoundError("y command not found")
 
     result = runner.invoke(app, ["flow", "1", "--no-shorten"])
     assert result.exit_code == 0
     assert "Flow command 'y' not found" in result.stdout
 
-    # Verify the flow session was attempted
-    mock_manager.start_flow_session.assert_called_once_with("Task 1")
+    # Verify the flow command was attempted with flow-go
+    mock_system.run_flow_command.assert_called_once_with("flow-go", "Task 1")
 
 
 @patch("omnifocus.interactive_edit_session_name")
+@patch("omnifocus.system")
 @patch("omnifocus.manager")
-def test_flow_command_uses_interesting_tasks(mock_manager, mock_interactive_edit):
+def test_flow_command_uses_interesting_tasks(
+    mock_manager, mock_system, mock_interactive_edit
+):
     """Test that flow command uses the same task list as interesting command."""
     # Mock the methods that both commands use
     mock_manager.get_inbox_tasks.return_value = [
@@ -1752,8 +1758,8 @@ def test_flow_command_uses_interesting_tasks(mock_manager, mock_interactive_edit
     # Mock interactive editing to return the original name
     mock_interactive_edit.return_value = "Flagged Task"
 
-    # Mock successful flow session start
-    mock_manager.start_flow_session.return_value = "Started flow session: Flagged Task"
+    # Mock successful flow command execution
+    mock_system.run_flow_command.return_value = "Flow command output"
 
     result = runner.invoke(app, ["flow", "2", "--no-shorten"])
     assert result.exit_code == 0
@@ -1762,7 +1768,7 @@ def test_flow_command_uses_interesting_tasks(mock_manager, mock_interactive_edit
     # Verify both inbox and flagged tasks were fetched (same as interesting command)
     mock_manager.get_inbox_tasks.assert_called_once()
     mock_manager.get_flagged_tasks.assert_called_once()
-    mock_manager.start_flow_session.assert_called_once_with("Flagged Task")
+    mock_system.run_flow_command.assert_called_once_with("flow-go", "Flagged Task")
 
 
 def test_osx_system_run_flow_command():
@@ -2017,9 +2023,10 @@ def test_interactive_edit_session_name_eof_error():
 
 @patch("omnifocus.LLMTaskShortener")
 @patch("omnifocus.interactive_edit_session_name")
+@patch("omnifocus.system")
 @patch("omnifocus.manager")
 def test_flow_command_with_llm_shortening(
-    mock_manager, mock_interactive_edit, mock_llm_class
+    mock_manager, mock_system, mock_interactive_edit, mock_llm_class
 ):
     """Test flow command with LLM shortening enabled."""
     # Mock the methods that flow command uses
@@ -2036,10 +2043,8 @@ def test_flow_command_with_llm_shortening(
     # Mock interactive editing to return the shortened name
     mock_interactive_edit.return_value = "Fix flow names"
 
-    # Mock successful flow session start
-    mock_manager.start_flow_session.return_value = (
-        "Started flow session: Fix flow names"
-    )
+    # Mock successful flow command execution
+    mock_system.run_flow_command.return_value = "Flow command output"
 
     result = runner.invoke(app, ["flow", "1"])
     assert result.exit_code == 0
@@ -2055,15 +2060,16 @@ def test_flow_command_with_llm_shortening(
     # Verify interactive editing was called with shortened name
     mock_interactive_edit.assert_called_once_with("Fix flow names")
 
-    # Verify the flow session was started with the final name
-    mock_manager.start_flow_session.assert_called_once_with("Fix flow names")
+    # Verify the flow command was called with flow-go directly
+    mock_system.run_flow_command.assert_called_once_with("flow-go", "Fix flow names")
 
 
 @patch("omnifocus.LLMTaskShortener")
 @patch("omnifocus.interactive_edit_session_name")
+@patch("omnifocus.system")
 @patch("omnifocus.manager")
 def test_flow_command_llm_failure_fallback(
-    mock_manager, mock_interactive_edit, mock_llm_class
+    mock_manager, mock_system, mock_interactive_edit, mock_llm_class
 ):
     """Test flow command when LLM shortening fails."""
     # Mock the methods that flow command uses
@@ -2080,10 +2086,8 @@ def test_flow_command_llm_failure_fallback(
     # Mock interactive editing to return the original name
     mock_interactive_edit.return_value = "Original Task Name"
 
-    # Mock successful flow session start
-    mock_manager.start_flow_session.return_value = (
-        "Started flow session: Original Task Name"
-    )
+    # Mock successful flow command execution
+    mock_system.run_flow_command.return_value = "Flow command output"
 
     result = runner.invoke(app, ["flow", "1"])
     assert result.exit_code == 0
@@ -2097,13 +2101,18 @@ def test_flow_command_llm_failure_fallback(
     # Verify interactive editing was called with original name (fallback)
     mock_interactive_edit.assert_called_once_with("Original Task Name")
 
-    # Verify the flow session was started with the original name
-    mock_manager.start_flow_session.assert_called_once_with("Original Task Name")
+    # Verify the flow command was called with flow-go directly
+    mock_system.run_flow_command.assert_called_once_with(
+        "flow-go", "Original Task Name"
+    )
 
 
 @patch("omnifocus.interactive_edit_session_name")
+@patch("omnifocus.system")
 @patch("omnifocus.manager")
-def test_flow_command_user_cancels_editing(mock_manager, mock_interactive_edit):
+def test_flow_command_user_cancels_editing(
+    mock_manager, mock_system, mock_interactive_edit
+):
     """Test flow command when user cancels interactive editing."""
     # Mock the methods that flow command uses
     mock_manager.get_inbox_tasks.return_value = []
@@ -2122,13 +2131,16 @@ def test_flow_command_user_cancels_editing(mock_manager, mock_interactive_edit):
     # Verify interactive editing was called
     mock_interactive_edit.assert_called_once_with("Task Name")
 
-    # Verify no flow session was started
-    mock_manager.start_flow_session.assert_not_called()
+    # Verify no flow command was executed since user cancelled
+    mock_system.run_flow_command.assert_not_called()
 
 
 @patch("omnifocus.interactive_edit_session_name")
+@patch("omnifocus.system")
 @patch("omnifocus.manager")
-def test_flow_command_dry_run_with_llm(mock_manager, mock_interactive_edit):
+def test_flow_command_dry_run_with_llm(
+    mock_manager, mock_system, mock_interactive_edit
+):
     """Test flow command dry run mode with new functionality."""
     # Mock the methods that flow command uses
     mock_manager.get_inbox_tasks.return_value = []
@@ -2147,5 +2159,5 @@ def test_flow_command_dry_run_with_llm(mock_manager, mock_interactive_edit):
     # Verify interactive editing was called
     mock_interactive_edit.assert_called_once_with("Task Name")
 
-    # Verify no actual flow session was started
-    mock_manager.start_flow_session.assert_not_called()
+    # Verify no actual flow command was executed in dry run mode
+    mock_system.run_flow_command.assert_not_called()
