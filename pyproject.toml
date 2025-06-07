@@ -23,6 +23,7 @@ dependencies = [
 
 [project.scripts]
 omnifocus = "omnifocus:app"
+todo = "omnifocus:app"
 
 [tool.ruff]
 target-version = "py312"
