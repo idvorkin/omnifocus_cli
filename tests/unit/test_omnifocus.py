@@ -811,7 +811,7 @@ def test_complete_command_dry_run(mock_manager):
         Task(id="3", name="Task 3", project="Personal", flagged=True),
     ]
 
-    result = runner.invoke(app, ["complete", "--dry-run", "1 3"])
+    result = runner.invoke(app, ["complete", "1", "3", "--dry-run"])
     assert result.exit_code == 0
     assert "Would complete 1: Task 1" in result.stdout
     assert "Would complete 3: Task 3" in result.stdout
@@ -838,7 +838,7 @@ def test_complete_command_actual_completion(mock_manager):
     # Mock successful completion
     mock_manager.complete.return_value = "Task completed successfully"
 
-    result = runner.invoke(app, ["complete", "--no-confirm", "1 3"])
+    result = runner.invoke(app, ["complete", "1", "3", "--no-confirm"])
     assert result.exit_code == 0
     assert "✓ 1: Task 1" in result.stdout
     assert "✓ 3: Task 3" in result.stdout
@@ -862,7 +862,7 @@ def test_complete_command_invalid_task_numbers(mock_manager):
         Task(id="2", name="Task 2", project="Work", flagged=True),
     ]
 
-    result = runner.invoke(app, ["complete", "1 5 2"])
+    result = runner.invoke(app, ["complete", "1", "5", "2"])
     assert result.exit_code == 0
     # With new validation, invalid task numbers cause early failure
     assert (
@@ -883,12 +883,9 @@ def test_complete_command_invalid_number_format(mock_manager):
     ]
     mock_manager.get_flagged_tasks.return_value = []
 
-    result = runner.invoke(app, ["complete", "abc 1"])
-    assert result.exit_code == 0
-    assert (
-        "Invalid task numbers. Please provide space-separated integers."
-        in result.stdout
-    )
+    result = runner.invoke(app, ["complete", "abc", "1"])
+    # With varargs, typer will catch the invalid "abc" argument type
+    assert result.exit_code != 0
 
     # Verify no tasks were completed due to invalid format
     mock_manager.complete.assert_not_called()
@@ -908,7 +905,7 @@ def test_complete_command_completion_error(mock_manager):
     # Mock completion failure for first task, success for second
     mock_manager.complete.side_effect = [Exception("Completion failed"), "Success"]
 
-    result = runner.invoke(app, ["complete", "--no-confirm", "1 2"])
+    result = runner.invoke(app, ["complete", "1", "2", "--no-confirm"])
     assert result.exit_code == 0
     assert "✗ 1: Task 1 - Completion failed" in result.stdout
     assert "✓ 2: Task 2" in result.stdout
@@ -928,7 +925,7 @@ def test_complete_command_dry_run_invalid_numbers(mock_manager):
         Task(id="2", name="Task 2", project="Work", flagged=True),
     ]
 
-    result = runner.invoke(app, ["complete", "--dry-run", "1 5 2"])
+    result = runner.invoke(app, ["complete", "1", "5", "2", "--dry-run"])
     assert result.exit_code == 0
     # With new validation, invalid task numbers cause early failure even in dry-run
     assert (
@@ -957,7 +954,7 @@ def test_complete_command_uses_interesting_tasks(mock_manager):
     ]
 
     # Test that complete command uses inbox+flagged tasks, not all tasks
-    result = runner.invoke(app, ["complete", "--dry-run", "1 2"])
+    result = runner.invoke(app, ["complete", "1", "2", "--dry-run"])
     assert result.exit_code == 0
     assert "Inbox Task" in result.stdout
     assert "Flagged Task" in result.stdout
@@ -981,7 +978,7 @@ def test_complete_command_empty_task_list(mock_manager):
     assert "No interesting tasks found" in result.stdout
 
     # Test with task numbers when no tasks exist - should return early with no tasks message
-    result = runner.invoke(app, ["complete", "1 2"])
+    result = runner.invoke(app, ["complete", "1", "2"])
     assert result.exit_code == 0
     assert "No interesting tasks found" in result.stdout
 
@@ -2245,7 +2242,7 @@ def test_complete_command_no_confirm_flag(mock_manager):
     mock_manager.get_flagged_tasks.return_value = []
     mock_manager.complete.return_value = "Task completed successfully"
 
-    result = runner.invoke(app, ["complete", "--no-confirm", "1 2"])
+    result = runner.invoke(app, ["complete", "1", "2", "--no-confirm"])
     assert result.exit_code == 0
     assert "✓ 1: Task 1" in result.stdout
     assert "✓ 2: Task 2" in result.stdout
@@ -2267,7 +2264,7 @@ def test_complete_command_with_confirmation_accept(mock_confirm, mock_manager):
     mock_manager.complete.return_value = "Task completed successfully"
     mock_confirm.return_value = True  # User accepts all confirmations
 
-    result = runner.invoke(app, ["complete", "1 2"])
+    result = runner.invoke(app, ["complete", "1", "2"])
     assert result.exit_code == 0
     assert "✓ 1: Task 1" in result.stdout
     assert "✓ 2: Task 2" in result.stdout
@@ -2289,7 +2286,7 @@ def test_complete_command_with_confirmation_reject(mock_confirm, mock_manager):
     mock_manager.complete.return_value = "Task completed successfully"
     mock_confirm.side_effect = [True, False]  # Accept first, reject second
 
-    result = runner.invoke(app, ["complete", "1 2"])
+    result = runner.invoke(app, ["complete", "1", "2"])
     assert result.exit_code == 0
     assert "✓ 1: Task 1" in result.stdout
     assert "⏭ 2: Task 2 (skipped)" in result.stdout
@@ -2310,7 +2307,7 @@ def test_complete_command_confirmation_keyboard_interrupt(mock_confirm, mock_man
     mock_manager.get_flagged_tasks.return_value = []
     mock_confirm.side_effect = KeyboardInterrupt()
 
-    result = runner.invoke(app, ["complete", "1 2"])
+    result = runner.invoke(app, ["complete", "1", "2"])
     assert result.exit_code == 0
     assert "Operation cancelled" in result.stdout
 
@@ -2350,7 +2347,7 @@ def test_complete_command_task_number_stability(mock_manager):
     mock_manager.get_flagged_tasks.return_value = [task2, task3]
     mock_manager.complete.return_value = "Task completed successfully"
 
-    result = runner.invoke(app, ["complete", "--no-confirm", "1 3 2"])
+    result = runner.invoke(app, ["complete", "1", "3", "2", "--no-confirm"])
     assert result.exit_code == 0
 
     # Verify the correct tasks were completed in the order specified by user
@@ -2383,7 +2380,7 @@ def test_complete_command_confirmation_shows_task_details(mock_manager):
 
     with patch("omnifocus.typer.confirm", return_value=True):
         result = runner.invoke(
-            app, ["complete", "1 1"]
+            app, ["complete", "1", "1"]
         )  # Same task twice to trigger confirmation
         assert result.exit_code == 0
 

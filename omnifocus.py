@@ -1620,8 +1620,46 @@ def _get_tasks_for_completion(
     return tasks_to_complete
 
 
+def _get_tasks_for_completion_from_list(
+    task_nums: List[int],
+) -> Optional[List[Tuple[int, str, Task]]]:
+    """Get task objects from a list of task numbers.
+
+    Args:
+        task_nums: List of task numbers
+
+    Returns:
+        List of (task_num, source, task) tuples or None if invalid
+    """
+    if not task_nums:
+        return None
+
+    all_interesting_tasks = _get_interesting_tasks()
+    if not all_interesting_tasks:
+        typer.echo(NO_TASKS_FOUND_ERROR)
+        return None
+
+    max_tasks = len(all_interesting_tasks)
+    tasks_to_complete = []
+
+    for num in task_nums:
+        if not _validate_task_number(num, max_tasks):
+            typer.echo(
+                f"✗ Invalid task number {num}. Please enter a number between 1 and {max_tasks}"
+            )
+            return None
+
+        source, task = all_interesting_tasks[num - 1]
+        tasks_to_complete.append((num, source, task))
+
+    return tasks_to_complete
+
+
 @app.command()
 def complete(
+    task_nums: Annotated[
+        List[int], typer.Argument(help="Task numbers to complete (space separated)")
+    ] = None,
     dry_run: Annotated[
         bool,
         typer.Option(
@@ -1635,15 +1673,17 @@ def complete(
             help="Skip confirmation prompts when completing multiple tasks",
         ),
     ] = False,
-    task_nums: Annotated[
-        str, typer.Argument(help="Space separated list of task numbers to complete")
-    ] = "",
 ):
     """List interesting tasks and complete specified task numbers.
 
     When completing multiple tasks, each task will be shown with a confirmation
     prompt before completion. Use --no-confirm to skip prompts for automation.
     Single task completion never requires confirmation.
+
+    Examples:
+        omnifocus complete 1
+        omnifocus complete 1 3 5
+        todo complete 2 4 --dry-run
     """
     # Early return if no task numbers provided
     if not task_nums:
@@ -1651,7 +1691,7 @@ def complete(
         return
 
     # Get and validate all tasks upfront to prevent task number shifting
-    tasks_to_complete = _get_tasks_for_completion(task_nums)
+    tasks_to_complete = _get_tasks_for_completion_from_list(task_nums)
     if tasks_to_complete is None:
         return
 
