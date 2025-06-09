@@ -841,13 +841,8 @@ system = OSXSystem()
 manager = OmniFocusManager(system)
 
 
-@app.command()
-def add_tasks_from_clipboard(
-    print_only: Annotated[
-        bool, typer.Option(help="Preview tasks without adding them")
-    ] = False,
-):
-    """Add tasks from clipboard to OmniFocus (one task per line)"""
+def _process_clipboard_tasks(manager: OmniFocusManager, system: OSXSystem, print_only: bool = False):
+    """Helper function to process tasks from clipboard."""
     ic(print_only)
     clipboard_content = system.get_clipboard_content()
 
@@ -860,40 +855,50 @@ def add_tasks_from_clipboard(
     # First clean up all tasks
     cleaned_tasks = []
     for line in lines:
-        task = sanitize_task_text(line)
-        if task:  # Only include non-empty tasks
-            cleaned_tasks.append(task)
+        task_text = sanitize_task_text(line)
+        if task_text:  # Only include non-empty tasks
+            cleaned_tasks.append(task_text)
 
     # Then deduplicate, keeping order
     seen = set()
     unique_tasks = []
-    for task in cleaned_tasks:
-        if task.lower() not in seen:  # Case-insensitive deduplication
-            seen.add(task.lower())
-            unique_tasks.append(task)
+    for task_text in cleaned_tasks:
+        if task_text.lower() not in seen:  # Case-insensitive deduplication
+            seen.add(task_text.lower())
+            unique_tasks.append(task_text)
 
     if len(unique_tasks) > 25:
-        print("Probably a bug you have too much clipboard")
+        console.print("[warning]Too many tasks from clipboard (max 25). Aborting.[/]")
         return
 
     # Print summary
-    print(
+    console.print(
         f"\nFound {len(lines)} lines, {len(cleaned_tasks)} valid tasks, {len(unique_tasks)} unique tasks"
     )
-    print("\nTasks to process:")
-    print("----------------")
+    console.print("\n[header]Tasks to process:[/header]")
+    console.print("----------------")
 
-    for task in unique_tasks:
-        task_name, tags = extract_tags_from_task(task)
+    for task_text in unique_tasks:
+        task_name, tags = extract_tags_from_task(task_text)
         if task_name.lower() in existing_tasks:
             existing_task = existing_tasks[task_name.lower()]
-            print(f"• {task_name} (Already exists in project: {existing_task.project})")
+            console.print(f"• {task_name} ([dim]Already exists in project: {existing_task.project}[/dim])")
         else:
-            print(f"• {task_name}")
+            console.print(f"• {task_name}")
             if not print_only:
                 success = manager.add_task(task_name, tags=tags)
                 if not success:
-                    print(f"  ✗ Failed to add task: {task_name}")
+                    console.print(f"  [danger]✗ Failed to add task: {task_name}[/danger]")
+
+
+@app.command(name="add-clipboard")
+def add_tasks_from_clipboard(
+    print_only: Annotated[
+        bool, typer.Option(help="Preview tasks without adding them")
+    ] = False,
+):
+    """Add tasks from clipboard to OmniFocus (one task per line)"""
+    _process_clipboard_tasks(manager, system, print_only)
 
 
 class View(str, Enum):
@@ -1039,7 +1044,7 @@ def list_flagged():
 
 @app.command()
 def add(
-    task: Annotated[str, typer.Argument(help="The task or URL to create a task from")],
+    task: Annotated[Optional[str], typer.Argument(help="The task or URL to create a task from")] = None,
     project: Annotated[str, typer.Option(help="Project to add the task to")] = "today",
     tags: Annotated[
         Optional[str],
@@ -1047,8 +1052,20 @@ def add(
             "--tag", help="Tags to add to the task (can be specified multiple times)"
         ),
     ] = None,
+    clipboard: Annotated[bool, typer.Option("--clipboard", help="Add tasks from clipboard")] = False,
 ):
     """Create a task. If the input looks like a URL, it will fetch the page title and use it as the task name."""
+    if clipboard:
+        if task is not None: # Check if task was explicitly provided
+             console.print("[warning]Ignoring task argument as --clipboard is used.[/]")
+        _process_clipboard_tasks(manager, system, print_only=False)
+        return
+
+    # If not using clipboard, task is required
+    if task is None:
+        console.print("[danger]Error: Task description or URL is required when not using --clipboard.[/danger]")
+        raise typer.Exit(code=1)
+
     # Convert tags string to list if provided
     tag_list = []
     if tags:
