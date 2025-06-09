@@ -171,7 +171,7 @@ def test_add_from_clipboard(mock_system_global, mock_manager_global):
     """
 
     # Test preview mode
-    result = runner.invoke(app, ["add-tasks-from-clipboard", "--print-only"])
+    result = runner.invoke(app, ["add-clipboard", "--print-only"])
     assert result.exit_code == 0
     assert "Task one" in result.stdout
     assert "Task two" in result.stdout
@@ -186,7 +186,7 @@ def test_add_from_clipboard(mock_system_global, mock_manager_global):
     mock_manager_global.reset_mock()
 
     # Test actual add
-    result = runner.invoke(app, ["add-tasks-from-clipboard"])
+    result = runner.invoke(app, ["add-clipboard"])
     assert result.exit_code == 0
     assert (
         mock_manager_global.add_task.call_count == 4
@@ -383,6 +383,69 @@ def test_add_command_with_regular_task():
     assert result.exit_code == 0
     assert "Task text too short" in result.stdout
     assert mock_manager.system.open_url.call_count == 2  # Should not have increased
+
+
+@patch("omnifocus.manager") # Patches the manager used by the app
+@patch("omnifocus.system")  # Patches the system used by the app
+def test_add_command_with_clipboard_flag(mock_app_system, mock_app_manager):
+    """Test 'add --clipboard' basic functionality."""
+    mock_app_system.get_clipboard_content.return_value = "Task A\nTask B"
+    mock_app_manager.get_all_tasks.return_value = [] # No existing tasks
+
+    result = runner.invoke(app, ["add", "--clipboard"])
+    assert result.exit_code == 0, result.stdout
+
+    mock_app_system.get_clipboard_content.assert_called_once()
+    assert mock_app_manager.add_task.call_count == 2
+    mock_app_manager.add_task.assert_any_call("Task A", tags=[])
+    mock_app_manager.add_task.assert_any_call("Task B", tags=[])
+
+
+@patch("omnifocus.manager")
+@patch("omnifocus.system")
+def test_add_command_with_clipboard_flag_and_task_arg(mock_app_system, mock_app_manager):
+    """Test 'add --clipboard' ignores task argument and shows warning."""
+    mock_app_system.get_clipboard_content.return_value = "Clipboard Task"
+    mock_app_manager.get_all_tasks.return_value = []
+
+    result = runner.invoke(app, ["add", "this should be ignored", "--clipboard"])
+    assert result.exit_code == 0, result.stdout
+    assert "Ignoring task argument as --clipboard is used." in result.stdout
+
+    mock_app_system.get_clipboard_content.assert_called_once()
+    mock_app_manager.add_task.assert_called_once_with("Clipboard Task", tags=[])
+
+
+@patch("omnifocus.manager")
+@patch("omnifocus.system")
+def test_add_command_with_clipboard_flag_empty_clipboard(mock_app_system, mock_app_manager):
+    """Test 'add --clipboard' with an empty clipboard."""
+    mock_app_system.get_clipboard_content.return_value = ""
+    mock_app_manager.get_all_tasks.return_value = []
+
+    result = runner.invoke(app, ["add", "--clipboard"])
+    assert result.exit_code == 0, result.stdout
+    assert "Found 0 lines" in result.stdout # From _process_clipboard_tasks
+
+    mock_app_system.get_clipboard_content.assert_called_once()
+    mock_app_manager.add_task.assert_not_called()
+
+
+@patch("omnifocus.manager")
+@patch("omnifocus.system")
+def test_add_command_with_clipboard_flag_complex(mock_app_system, mock_app_manager):
+    """Test 'add --clipboard' with complex content (sanitization, duplicates)."""
+    mock_app_system.get_clipboard_content.return_value = "☐ Task X\nTask Y\nTask Y\n☑ Done"
+    mock_app_manager.get_all_tasks.return_value = [] # No existing tasks initially
+
+    result = runner.invoke(app, ["add", "--clipboard"])
+    assert result.exit_code == 0, result.stdout
+
+    mock_app_system.get_clipboard_content.assert_called_once()
+    assert mock_app_manager.add_task.call_count == 2
+    mock_app_manager.add_task.assert_any_call("Task X", tags=[])
+    mock_app_manager.add_task.assert_any_call("Task Y", tags=[])
+    # "Done" should be ignored due to ☑
 
 
 @patch("omnifocus.requests")
