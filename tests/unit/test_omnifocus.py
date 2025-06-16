@@ -35,6 +35,7 @@ from omnifocus import (
     extract_tags_from_task,
     extract_url_from_task,
     _get_interesting_tasks,
+    parse_snooze_time,
     Task,
     OmniFocusManager,
     OSXSystem,
@@ -385,12 +386,12 @@ def test_add_command_with_regular_task():
     assert mock_manager.system.open_url.call_count == 2  # Should not have increased
 
 
-@patch("omnifocus.manager") # Patches the manager used by the app
+@patch("omnifocus.manager")  # Patches the manager used by the app
 @patch("omnifocus.system")  # Patches the system used by the app
 def test_add_command_with_clipboard_flag(mock_app_system, mock_app_manager):
     """Test 'add --clipboard' basic functionality."""
     mock_app_system.get_clipboard_content.return_value = "Task A\nTask B"
-    mock_app_manager.get_all_tasks.return_value = [] # No existing tasks
+    mock_app_manager.get_all_tasks.return_value = []  # No existing tasks
 
     result = runner.invoke(app, ["add", "--clipboard"])
     assert result.exit_code == 0, result.stdout
@@ -403,7 +404,9 @@ def test_add_command_with_clipboard_flag(mock_app_system, mock_app_manager):
 
 @patch("omnifocus.manager")
 @patch("omnifocus.system")
-def test_add_command_with_clipboard_flag_and_task_arg(mock_app_system, mock_app_manager):
+def test_add_command_with_clipboard_flag_and_task_arg(
+    mock_app_system, mock_app_manager
+):
     """Test 'add --clipboard' ignores task argument and shows warning."""
     mock_app_system.get_clipboard_content.return_value = "Clipboard Task"
     mock_app_manager.get_all_tasks.return_value = []
@@ -418,14 +421,16 @@ def test_add_command_with_clipboard_flag_and_task_arg(mock_app_system, mock_app_
 
 @patch("omnifocus.manager")
 @patch("omnifocus.system")
-def test_add_command_with_clipboard_flag_empty_clipboard(mock_app_system, mock_app_manager):
+def test_add_command_with_clipboard_flag_empty_clipboard(
+    mock_app_system, mock_app_manager
+):
     """Test 'add --clipboard' with an empty clipboard."""
     mock_app_system.get_clipboard_content.return_value = ""
     mock_app_manager.get_all_tasks.return_value = []
 
     result = runner.invoke(app, ["add", "--clipboard"])
     assert result.exit_code == 0, result.stdout
-    assert "Found 0 lines" in result.stdout # From _process_clipboard_tasks
+    assert "Found 0 lines" in result.stdout  # From _process_clipboard_tasks
 
     mock_app_system.get_clipboard_content.assert_called_once()
     mock_app_manager.add_task.assert_not_called()
@@ -435,8 +440,10 @@ def test_add_command_with_clipboard_flag_empty_clipboard(mock_app_system, mock_a
 @patch("omnifocus.system")
 def test_add_command_with_clipboard_flag_complex(mock_app_system, mock_app_manager):
     """Test 'add --clipboard' with complex content (sanitization, duplicates)."""
-    mock_app_system.get_clipboard_content.return_value = "☐ Task X\nTask Y\nTask Y\n☑ Done"
-    mock_app_manager.get_all_tasks.return_value = [] # No existing tasks initially
+    mock_app_system.get_clipboard_content.return_value = (
+        "☐ Task X\nTask Y\nTask Y\n☑ Done"
+    )
+    mock_app_manager.get_all_tasks.return_value = []  # No existing tasks initially
 
     result = runner.invoke(app, ["add", "--clipboard"])
     assert result.exit_code == 0, result.stdout
@@ -2428,26 +2435,402 @@ def test_complete_command_task_number_stability(mock_manager):
 
 @patch("omnifocus.manager")
 def test_complete_command_confirmation_shows_task_details(mock_manager):
-    """Test that confirmation prompts show task details."""
-    task_with_tags = Task(
-        id="1",
-        name="Important Task",
-        project="Work",
-        flagged=False,
-        tags=["urgent", "meeting"],
+    """Test that confirmation prompt shows task details for multi-task completion."""
+    tasks = [
+        Task(
+            name="First task",
+            project="Work",
+            tags=["urgent"],
+            id="task1",
+        ),
+        Task(
+            name="Second task",
+            project="Personal",
+            tags=["weekend", "home"],
+            id="task2",
+        ),
+    ]
+
+    mock_manager.get_inbox_tasks.return_value = []
+    mock_manager.get_flagged_tasks.return_value = tasks
+    mock_manager.complete.return_value = "Task completed"
+
+    with patch("omnifocus.typer.confirm", return_value=True) as mock_confirm:
+        result = runner.invoke(app, ["complete", "1", "2"])
+
+    assert result.exit_code == 0
+    assert "First task" in result.stdout
+    assert "Work" in result.stdout
+    assert "urgent" in result.stdout
+    assert "Second task" in result.stdout
+    assert "Personal" in result.stdout
+    assert "weekend, home" in result.stdout
+    assert mock_confirm.call_count == 2
+
+
+def test_parse_snooze_time():
+    """Test parsing of snooze time specifications."""
+
+    # Mock current time for consistent testing
+    with patch("omnifocus.datetime") as mock_datetime:
+        # Set a fixed current time: 2025-01-15 12:00:00
+        mock_now = datetime(2025, 1, 15, 12, 0, 0)
+        mock_datetime.now.return_value = mock_now
+        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+
+        # Test day specification
+        result = parse_snooze_time("day")
+        expected = datetime(2025, 1, 16, 0, 0, 0)  # Next day at midnight
+        assert result == expected
+
+        # Test week specification
+        result = parse_snooze_time("week")
+        expected = datetime(2025, 1, 22, 0, 0, 0)  # One week from current day
+        assert result == expected
+
+        # Test month specification
+        result = parse_snooze_time("month")
+        expected = datetime(2025, 2, 15, 0, 0, 0)  # One month from current day
+        assert result == expected
+
+
+def test_parse_snooze_time_month_edge_cases():
+    """Test month parsing edge cases like end of month."""
+    with patch("omnifocus.datetime") as mock_datetime:
+        # Test January 31st -> February (should go to Feb 28 in non-leap year)
+        mock_now = datetime(2025, 1, 31, 12, 0, 0)
+        mock_datetime.now.return_value = mock_now
+        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+
+        result = parse_snooze_time("month")
+        expected = datetime(2025, 2, 28, 0, 0, 0)  # Feb 28 (non-leap year)
+        assert result == expected
+
+        # Test December -> January next year
+        mock_now = datetime(2025, 12, 15, 12, 0, 0)
+        mock_datetime.now.return_value = mock_now
+
+        result = parse_snooze_time("month")
+        expected = datetime(2026, 1, 15, 0, 0, 0)  # Next year
+        assert result == expected
+
+
+def test_parse_snooze_time_invalid_spec():
+    """Test parsing with invalid time specification."""
+    with pytest.raises(ValueError, match="Unsupported time specification: invalid"):
+        parse_snooze_time("invalid")
+
+
+def test_snooze_task(manager, mock_system):
+    """Test snoozing a task with all expected changes."""
+    from datetime import datetime
+
+    # Create test task
+    task = Task(
+        name="Test task",
+        project="Inbox",
+        tags=["existing"],
+        flagged=True,
+        note="Original note",
+        id="test123",
     )
 
-    mock_manager.get_inbox_tasks.return_value = [task_with_tags]
+    defer_date = datetime(2025, 6, 20, 0, 0, 0)
+
+    # Test snoozing
+    result = manager.snooze_task(task, defer_date, "week")
+    assert result is True
+
+    # Verify URL construction and system call
+    mock_system.open_url.assert_called()
+    call_args = mock_system.open_url.call_args[0][0]
+
+    # Check that the URL contains expected parameters
+    assert "name=Test%20task" in call_args
+    assert "project=Followups" in call_args
+    assert "defer=2025-06-20" in call_args
+    assert "due=2025-06-20" in call_args
+    assert "tags=existing%2Csnoozed" in call_args
+    assert "flag=true" not in call_args  # Flag should be cleared
+
+    # Verify complete was called to remove original task
+    mock_system.run_javascript.assert_called()
+
+
+def test_snooze_task_non_inbox_project(manager, mock_system):
+    """Test snoozing a task that's not in Inbox (should stay in same project)."""
+    from datetime import datetime
+
+    # Create test task in non-Inbox project
+    task = Task(
+        name="Work task",
+        project="Work",
+        tags=["urgent"],
+        flagged=False,
+        note="Work note",
+        id="work123",
+    )
+
+    defer_date = datetime(2025, 6, 20, 0, 0, 0)
+
+    # Test snoozing
+    result = manager.snooze_task(task, defer_date, "day")
+    assert result is True
+
+    # Verify task stays in Work project
+    call_args = mock_system.open_url.call_args[0][0]
+    assert "project=Work" in call_args  # Should stay in Work, not move to Followups
+    assert "tags=urgent%2Csnoozed" in call_args
+
+
+def test_snooze_task_already_has_snoozed_tag(manager, mock_system):
+    """Test snoozing a task that already has snoozed tag."""
+    from datetime import datetime
+
+    # Create test task that already has snoozed tag
+    task = Task(
+        name="Already snoozed",
+        project="Followups",
+        tags=["snoozed", "other"],
+        flagged=True,
+        note="Previous snooze note",
+        id="snoozed123",
+    )
+
+    defer_date = datetime(2025, 7, 1, 0, 0, 0)
+
+    # Test snoozing
+    result = manager.snooze_task(task, defer_date, "month")
+    assert result is True
+
+    # Verify snoozed tag is not duplicated
+    call_args = mock_system.open_url.call_args[0][0]
+    assert "tags=snoozed%2Cother" in call_args  # Should not duplicate snoozed tag
+
+
+def test_snooze_task_no_existing_note(manager, mock_system):
+    """Test snoozing a task with no existing note."""
+    from datetime import datetime
+
+    # Create test task with no note
+    task = Task(
+        name="No note task",
+        project="Inbox",
+        tags=[],
+        flagged=False,
+        note=None,
+        id="nonote123",
+    )
+
+    defer_date = datetime(2025, 6, 25, 0, 0, 0)
+
+    # Test snoozing
+    result = manager.snooze_task(task, defer_date, "day")
+    assert result is True
+
+    # Verify snooze note is added without extra newlines
+    call_args = mock_system.open_url.call_args[0][0]
+    assert "note=Snoozed%20for%20day%20until%202025-06-25" in call_args
+
+
+def test_snooze_task_error_handling(manager, mock_system):
+    """Test snooze task error handling."""
+    from datetime import datetime
+
+    # Make system.open_url raise an exception
+    mock_system.open_url.side_effect = Exception("URL scheme failed")
+
+    task = Task(
+        name="Error task",
+        project="Inbox",
+        tags=[],
+        flagged=False,
+        note="",
+        id="error123",
+    )
+
+    defer_date = datetime(2025, 6, 20, 0, 0, 0)
+
+    # Test snoozing with error
+    result = manager.snooze_task(task, defer_date, "week")
+    assert result is False
+
+
+@patch("omnifocus.parse_snooze_time")
+@patch("omnifocus.manager")
+def test_snooze_command_success(mock_manager, mock_parse_time):
+    """Test successful snooze command execution."""
+    from datetime import datetime
+
+    # Mock time parsing
+    defer_date = datetime(2025, 6, 20, 0, 0, 0)
+    mock_parse_time.return_value = defer_date
+
+    # Mock task retrieval
+    task = Task(
+        name="Task to snooze",
+        project="Inbox",
+        tags=["urgent"],
+        flagged=True,
+        id="snooze123",
+    )
+
+    mock_manager.get_inbox_tasks.return_value = []
+    mock_manager.get_flagged_tasks.return_value = [task]
+    mock_manager.snooze_task.return_value = True
+
+    # Test snooze command
+    result = runner.invoke(app, ["snooze", "1", "week"])
+    assert result.exit_code == 0
+
+    # Verify parsing was called with correct time spec
+    mock_parse_time.assert_called_once_with("week")
+
+    # Verify snooze_task was called with correct parameters
+    mock_manager.snooze_task.assert_called_once_with(task, defer_date, "week")
+
+    # Check output contains success message
+    assert "Successfully snoozed task until 2025-06-20" in result.stdout
+    assert "Task to snooze" in result.stdout
+    assert "Cleared flag" in result.stdout
+    assert "Moved from: Inbox to: Followups" in result.stdout
+
+
+@patch("omnifocus.parse_snooze_time")
+@patch("omnifocus.manager")
+def test_snooze_command_dry_run(mock_manager, mock_parse_time):
+    """Test snooze command dry run mode."""
+    from datetime import datetime
+
+    # Mock time parsing
+    defer_date = datetime(2025, 7, 1, 0, 0, 0)
+    mock_parse_time.return_value = defer_date
+
+    # Mock task retrieval
+    task = Task(
+        name="Dry run task",
+        project="Work",
+        tags=["test"],
+        flagged=False,
+        id="dry123",
+    )
+
+    mock_manager.get_inbox_tasks.return_value = [task]
     mock_manager.get_flagged_tasks.return_value = []
-    mock_manager.complete.return_value = "Task completed successfully"
 
-    with patch("omnifocus.typer.confirm", return_value=True):
-        result = runner.invoke(
-            app, ["complete", "1", "1"]
-        )  # Same task twice to trigger confirmation
-        assert result.exit_code == 0
+    # Test dry run
+    result = runner.invoke(app, ["snooze", "1", "month", "--dry-run"])
+    assert result.exit_code == 0
 
-        # Check that task details are shown in confirmation
-        assert "Task 1: Important Task" in result.stdout
-        assert "Project: Work" in result.stdout
-        assert "Tags: urgent, meeting" in result.stdout
+    # Verify parsing was called
+    mock_parse_time.assert_called_once_with("month")
+
+    # Verify snooze_task was NOT called
+    mock_manager.snooze_task.assert_not_called()
+
+    # Check dry run output
+    assert "Dry run complete - task would be snoozed" in result.stdout
+    assert "Will snooze until: 2025-07-01" in result.stdout
+
+
+@patch("omnifocus.parse_snooze_time")
+@patch("omnifocus.manager")
+def test_snooze_command_invalid_time_spec(mock_manager, mock_parse_time):
+    """Test snooze command with invalid time specification."""
+    # Mock time parsing to raise ValueError
+    mock_parse_time.side_effect = ValueError("Unsupported time specification: invalid")
+
+    # Test with invalid time spec
+    result = runner.invoke(app, ["snooze", "1", "invalid"])
+    assert result.exit_code == 0  # Command doesn't exit with error, just prints message
+
+    # Verify error message is shown
+    assert "Unsupported time specification: invalid" in result.stdout
+
+    # Verify snooze_task was not called
+    mock_manager.snooze_task.assert_not_called()
+
+
+@patch("omnifocus.parse_snooze_time")
+@patch("omnifocus.manager")
+def test_snooze_command_invalid_task_number(mock_manager, mock_parse_time):
+    """Test snooze command with invalid task number."""
+    from datetime import datetime
+
+    # Mock time parsing
+    mock_parse_time.return_value = datetime(2025, 6, 20, 0, 0, 0)
+
+    # Mock empty task list
+    mock_manager.get_inbox_tasks.return_value = []
+    mock_manager.get_flagged_tasks.return_value = []
+
+    # Test with invalid task number
+    result = runner.invoke(app, ["snooze", "99", "day"])
+    assert result.exit_code == 0
+
+    # Verify error message
+    assert "No interesting tasks found!" in result.stdout
+
+
+@patch("omnifocus.parse_snooze_time")
+@patch("omnifocus.manager")
+def test_snooze_command_snooze_failure(mock_manager, mock_parse_time):
+    """Test snooze command when snooze_task fails."""
+    from datetime import datetime
+
+    # Mock time parsing
+    defer_date = datetime(2025, 6, 20, 0, 0, 0)
+    mock_parse_time.return_value = defer_date
+
+    # Mock task retrieval
+    task = Task(
+        name="Failing task",
+        project="Inbox",
+        tags=[],
+        flagged=False,
+        id="fail123",
+    )
+
+    mock_manager.get_inbox_tasks.return_value = [task]
+    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.snooze_task.return_value = False  # Simulate failure
+
+    # Test snooze command
+    result = runner.invoke(app, ["snooze", "1", "day"])
+    assert result.exit_code == 0
+
+    # Verify failure message
+    assert "Failed to snooze task" in result.stdout
+
+
+@patch("omnifocus.parse_snooze_time")
+@patch("omnifocus.manager")
+def test_snooze_command_non_flagged_non_inbox_task(mock_manager, mock_parse_time):
+    """Test snooze command with task that's not flagged and not in inbox."""
+    from datetime import datetime
+
+    # Mock time parsing
+    defer_date = datetime(2025, 6, 25, 0, 0, 0)
+    mock_parse_time.return_value = defer_date
+
+    # Mock task retrieval
+    task = Task(
+        name="Regular task",
+        project="Personal",
+        tags=["home"],
+        flagged=False,
+        id="regular123",
+    )
+
+    mock_manager.get_inbox_tasks.return_value = [task]
+    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.snooze_task.return_value = True
+
+    # Test snooze command
+    result = runner.invoke(app, ["snooze", "1", "day"])
+    assert result.exit_code == 0
+
+    # Verify output doesn't mention flag clearing or project moving
+    assert "Successfully snoozed task until 2025-06-25" in result.stdout
+    assert "Cleared flag" not in result.stdout  # Task wasn't flagged
+    assert "Moved from: Inbox" not in result.stdout  # Check that it's not in the output

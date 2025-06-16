@@ -24,7 +24,7 @@ import json
 from enum import Enum
 from pydantic import BaseModel, Field
 from typing import List, Optional, Tuple
-from datetime import datetime
+from datetime import datetime, timedelta
 import requests
 from bs4 import BeautifulSoup
 import uuid
@@ -36,6 +36,56 @@ from rich.table import Table
 from rich.text import Text
 from rich import box
 import shlex
+
+
+def parse_snooze_time(time_spec: str) -> datetime:
+    """Parse snooze time specification into datetime.
+
+    Args:
+        time_spec: One of 'day', 'week', or 'month'
+
+    Returns:
+        datetime: The defer date
+
+    Raises:
+        ValueError: If time_spec is not supported
+    """
+    now = datetime.now()
+
+    if time_spec == "day":
+        return datetime(now.year, now.month, now.day) + timedelta(days=1)
+    elif time_spec == "week":
+        return datetime(now.year, now.month, now.day) + timedelta(weeks=1)
+    elif time_spec == "month":
+        # Add one month, handling year rollover
+        if now.month == 12:
+            return datetime(now.year + 1, 1, now.day)
+        else:
+            try:
+                return datetime(now.year, now.month + 1, now.day)
+            except ValueError:  # Handle month with fewer days
+                # Go to last day of next month
+                next_month = now.month + 1
+                year = now.year
+                if next_month > 12:
+                    next_month = 1
+                    year += 1
+                # Find last day of next month
+                if next_month == 2:
+                    last_day = (
+                        29
+                        if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
+                        else 28
+                    )
+                elif next_month in [4, 6, 9, 11]:
+                    last_day = 30
+                else:
+                    last_day = 31
+                return datetime(year, next_month, min(now.day, last_day))
+    else:
+        raise ValueError(
+            f"Unsupported time specification: {time_spec}. Use 'day', 'week', or 'month'."
+        )
 
 
 # Create a custom theme for consistent colors
@@ -802,6 +852,73 @@ class OmniFocusManager:
             print(f"Error using URL scheme to clear tags: {e}")
             return False
 
+    def snooze_task(self, task: Task, defer_until: datetime, time_spec: str) -> bool:
+        """Snooze a task by setting defer/due dates, clearing flag, adding snoozed tag, and moving from inbox to Followups.
+
+        Args:
+            task: The Task object to snooze
+            defer_until: When to defer the task until (also sets due date to same date)
+            time_spec: The original time specification (for note)
+
+        Returns:
+            bool: True if the task was snoozed successfully, False otherwise
+        """
+        try:
+            # Prepare new tag list
+            new_tags = task.tags.copy() if task.tags else []
+            if "snoozed" not in new_tags:
+                new_tags.append("snoozed")
+
+            # Determine new project - move inbox tasks to Followups
+            new_project = task.project
+            if task.project == "Inbox":
+                new_project = "Followups"
+
+            # Prepare snooze note to append
+            snooze_note = (
+                f"Snoozed for {time_spec} until {defer_until.strftime('%Y-%m-%d')}"
+            )
+
+            # Combine existing note with snooze note
+            if task.note:
+                new_note = f"{task.note}\n\n{snooze_note}"
+            else:
+                new_note = snooze_note
+
+            # Create new task with updated properties using URL scheme
+            params = {
+                "name": task.name,
+                "autosave": "true",
+                "project": new_project,
+                "defer": defer_until.strftime("%Y-%m-%d"),
+                "due": defer_until.strftime(
+                    "%Y-%m-%d"
+                ),  # Set due date same as defer date
+                "tags": ",".join(new_tags),
+                "note": new_note,
+            }
+
+            # Don't add flag=true (this clears the flag when snoozing)
+
+            # Add estimated duration if present
+            if task.estimated_minutes:
+                params["estimate"] = str(task.estimated_minutes)
+
+            url = "omnifocus:///add?" + urllib.parse.urlencode(
+                params, quote_via=urllib.parse.quote
+            )
+
+            print(f"Snoozing task with URL: {url}")
+            self.system.open_url(url)
+
+            # Complete the original task to "replace" it
+            self.complete(task)
+
+            return True
+        except Exception as e:
+            print(f"Error snoozing task: {e}")
+            return False
+
 
 def sanitize_task_text(task: str) -> str:
     """Clean up a task string by removing markers and formatting."""
@@ -841,7 +958,9 @@ system = OSXSystem()
 manager = OmniFocusManager(system)
 
 
-def _process_clipboard_tasks(manager: OmniFocusManager, system: OSXSystem, print_only: bool = False):
+def _process_clipboard_tasks(
+    manager: OmniFocusManager, system: OSXSystem, print_only: bool = False
+):
     """Helper function to process tasks from clipboard."""
     ic(print_only)
     clipboard_content = system.get_clipboard_content()
@@ -882,13 +1001,17 @@ def _process_clipboard_tasks(manager: OmniFocusManager, system: OSXSystem, print
         task_name, tags = extract_tags_from_task(task_text)
         if task_name.lower() in existing_tasks:
             existing_task = existing_tasks[task_name.lower()]
-            console.print(f"• {task_name} ([dim]Already exists in project: {existing_task.project}[/dim])")
+            console.print(
+                f"• {task_name} ([dim]Already exists in project: {existing_task.project}[/dim])"
+            )
         else:
             console.print(f"• {task_name}")
             if not print_only:
                 success = manager.add_task(task_name, tags=tags)
                 if not success:
-                    console.print(f"  [danger]✗ Failed to add task: {task_name}[/danger]")
+                    console.print(
+                        f"  [danger]✗ Failed to add task: {task_name}[/danger]"
+                    )
 
 
 @app.command(name="add-clipboard")
@@ -1044,7 +1167,9 @@ def list_flagged():
 
 @app.command()
 def add(
-    task: Annotated[Optional[str], typer.Argument(help="The task or URL to create a task from")] = None,
+    task: Annotated[
+        Optional[str], typer.Argument(help="The task or URL to create a task from")
+    ] = None,
     project: Annotated[str, typer.Option(help="Project to add the task to")] = "today",
     tags: Annotated[
         Optional[str],
@@ -1052,18 +1177,22 @@ def add(
             "--tag", help="Tags to add to the task (can be specified multiple times)"
         ),
     ] = None,
-    clipboard: Annotated[bool, typer.Option("--clipboard", help="Add tasks from clipboard")] = False,
+    clipboard: Annotated[
+        bool, typer.Option("--clipboard", help="Add tasks from clipboard")
+    ] = False,
 ):
     """Create a task. If the input looks like a URL, it will fetch the page title and use it as the task name."""
     if clipboard:
-        if task is not None: # Check if task was explicitly provided
-             console.print("[warning]Ignoring task argument as --clipboard is used.[/]")
+        if task is not None:  # Check if task was explicitly provided
+            console.print("[warning]Ignoring task argument as --clipboard is used.[/]")
         _process_clipboard_tasks(manager, system, print_only=False)
         return
 
     # If not using clipboard, task is required
     if task is None:
-        console.print("[danger]Error: Task description or URL is required when not using --clipboard.[/danger]")
+        console.print(
+            "[danger]Error: Task description or URL is required when not using --clipboard.[/danger]"
+        )
         raise typer.Exit(code=1)
 
     # Convert tags string to list if provided
@@ -1419,6 +1548,87 @@ def test_append_pydantic():
         print("✓ Successfully appended text to task note using Pydantic Task object")
     else:
         print("✗ Failed to append text to task note using Pydantic Task object")
+
+
+@app.command()
+def test_snooze():
+    """Test snooze functionality by creating a task and snoozing it"""
+    # Create a unique test task name
+    test_name = f"TEST-SNOOZE-{uuid.uuid4().hex[:8]}"
+
+    # Create a flagged task in inbox
+    print(f"Creating test task '{test_name}' in Inbox (flagged)")
+    success = manager.add_task(
+        test_name,
+        project="Inbox",
+        tags=["testing"],
+        note="Test task for snooze functionality",
+        flagged=True,
+    )
+    if not success:
+        print(f"✗ Failed to create test task '{test_name}'")
+        return
+    time.sleep(1)  # Brief pause to ensure OmniFocus has time to process
+
+    # Get the task
+    tasks = manager.get_all_tasks()
+    test_task = next((task for task in tasks if task.name == test_name), None)
+
+    if not test_task:
+        print(f"✗ Could not find the test task '{test_name}'")
+        return
+
+    # Test snoozing the task for 1 day
+    print(f"Snoozing test task '{test_name}' for 1 day")
+    defer_until = parse_snooze_time("day")
+
+    if manager.snooze_task(test_task, defer_until, "day"):
+        print(f"✓ Successfully snoozed task until {defer_until.strftime('%Y-%m-%d')}")
+
+        # Wait and verify the snooze worked
+        time.sleep(2)
+        tasks = manager.get_all_tasks()
+
+        # Look for a task with the same name in Followups project with snoozed tag
+        snoozed_task = None
+        for task in tasks:
+            if (
+                task.name == test_name
+                and "snoozed" in (task.tags or [])
+                and task.project == "Followups"
+            ):
+                snoozed_task = task
+                break
+
+        if snoozed_task:
+            print("✓ Successfully verified task was moved to Followups project")
+            print("✓ Successfully verified 'snoozed' tag was added")
+            if not snoozed_task.flagged:
+                print("✓ Successfully verified flag was cleared")
+            else:
+                print("✗ Failed to verify flag was cleared")
+            if snoozed_task.note and "Snoozed for day" in snoozed_task.note:
+                print("✓ Successfully verified snooze note was appended")
+            else:
+                print("✗ Failed to verify snooze note was appended")
+            if snoozed_task.defer_date:
+                print(
+                    f"✓ Successfully verified defer date was set to {snoozed_task.defer_date.date()}"
+                )
+            else:
+                print("✗ Failed to verify defer date was set")
+            if snoozed_task.due_date:
+                print(
+                    f"✓ Successfully verified due date was set to {snoozed_task.due_date.date()}"
+                )
+            else:
+                print("✗ Failed to verify due date was set")
+        else:
+            print("✗ Could not find snoozed task in Followups project")
+    else:
+        print("✗ Failed to snooze task")
+
+    print("\nSnooze testing completed.")
 
 
 def extract_url_from_task(task: Task) -> Optional[str]:
@@ -1963,6 +2173,98 @@ def flow(
         )
     except Exception as e:
         console.print(f"[red]✗[/] Error starting flow session: {e}")
+
+
+@app.command()
+def snooze(
+    task_num: Annotated[
+        int,
+        typer.Argument(help="Task number from the interesting command to snooze"),
+    ],
+    time_spec: Annotated[
+        str,
+        typer.Argument(help="Snooze duration: 'day', 'week', or 'month'"),
+    ],
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            "--dry-run", help="Show what would happen without actually snoozing"
+        ),
+    ] = False,
+):
+    """Snooze a task by setting defer/due dates, clearing flag, adding 'snoozed' tag, and moving inbox tasks to 'Followups' project.
+
+    Examples:
+        omnifocus snooze 1 day
+        omnifocus snooze 3 week
+        omnifocus snooze 5 month
+    """
+    try:
+        # Validate time specification
+        try:
+            defer_until = parse_snooze_time(time_spec)
+        except ValueError as e:
+            console.print(f"[red]✗[/] {str(e)}")
+            return
+
+        # Get the task
+        source, selected_task = _get_task_by_number(task_num)
+
+        console.print(f"[info]Task:[/] [bold]{selected_task.name}[/]")
+        console.print(f"[info]Current project:[/] [project]{selected_task.project}[/]")
+
+        if selected_task.tags:
+            console.print(
+                f"[info]Current tags:[/] [tag]{', '.join(selected_task.tags)}[/]"
+            )
+
+        # Determine new project
+        new_project = selected_task.project
+        if selected_task.project == "Inbox":
+            new_project = "Followups"
+
+        # Show what will happen
+        console.print(
+            f"\n[info]Will snooze until:[/] [date]{defer_until.strftime('%Y-%m-%d')}[/]"
+        )
+        console.print(
+            f"[info]Will set both defer and due date to:[/] [date]{defer_until.strftime('%Y-%m-%d')}[/]"
+        )
+        console.print("[info]Will add tag:[/] [tag]snoozed[/]")
+        console.print(f"[info]Will move to project:[/] [project]{new_project}[/]")
+        if selected_task.flagged:
+            console.print("[info]Will clear flag[/] (task is currently flagged)")
+        console.print(
+            f"[info]Will append to note:[/] Snoozed for {time_spec} until {defer_until.strftime('%Y-%m-%d')}"
+        )
+
+        if dry_run:
+            console.print("\n[success]✓ Dry run complete - task would be snoozed[/]")
+            return
+
+        # Execute the snooze
+        if manager.snooze_task(selected_task, defer_until, time_spec):
+            console.print(
+                f"\n[green]✓[/] Successfully snoozed task until {defer_until.strftime('%Y-%m-%d')}"
+            )
+            console.print(f"  [info]Task:[/] {selected_task.name}")
+            console.print(
+                f"  [info]Set defer and due date to:[/] [date]{defer_until.strftime('%Y-%m-%d')}[/]"
+            )
+            console.print("  [info]Added tag:[/] [tag]snoozed[/]")
+            if selected_task.flagged:
+                console.print("  [info]Cleared flag[/]")
+            if selected_task.project == "Inbox":
+                console.print(
+                    "  [info]Moved from:[/] [project]Inbox[/] [info]to:[/] [project]Followups[/]"
+                )
+        else:
+            console.print("[red]✗[/] Failed to snooze task")
+
+    except ValueError as e:
+        console.print(f"[red]✗[/] {str(e)}")
+    except Exception as e:
+        console.print(f"[red]✗[/] Error snoozing task: {e}")
 
 
 if __name__ == "__main__":
