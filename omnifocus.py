@@ -1745,6 +1745,71 @@ def interesting():
 
 
 @app.command()
+def ainteresting():
+    """Output interesting tasks in Alfred JSON format for workflow integration"""
+    all_tasks = _get_interesting_tasks()
+
+    # Sort by creation date, most recent first
+    all_tasks_sorted = sorted(
+        all_tasks,
+        key=lambda x: x[1].creation_date if x[1].creation_date else datetime.min,
+        reverse=True,
+    )
+
+    # Build Alfred JSON format
+    items = []
+    for i, (source, task) in enumerate(all_tasks_sorted, 1):
+        # Build subtitle with metadata
+        subtitle_parts = []
+        if task.project and task.project != "Inbox":
+            subtitle_parts.append(f"📁 {task.project}")
+        if task.tags:
+            subtitle_parts.append(f"🏷️ {', '.join(task.tags)}")
+        if task.due_date:
+            subtitle_parts.append(f"📅 Due: {task.due_date.date()}")
+        if task.creation_date:
+            subtitle_parts.append(f"Created: {task.creation_date.date()}")
+        subtitle_parts.append(f"({source})")
+
+        subtitle = " · ".join(subtitle_parts) if subtitle_parts else source
+
+        # Build title with icons
+        title_parts = []
+        if task.flagged:
+            title_parts.append("🚩")
+        if extract_url_from_task(task):
+            title_parts.append("🌐")
+        title_parts.append(task.name)
+        title = " ".join(title_parts)
+
+        # Build Alfred item
+        item = {
+            "uid": task.id or f"task-{i}",
+            "title": title,
+            "subtitle": subtitle,
+            "arg": str(i),  # Pass task number for use in other commands
+            "autocomplete": task.name,
+            "valid": True,
+            "match": task.name,  # Allow Alfred to match on task name
+            "text": {
+                "copy": task.name,
+                "largetype": f"{task.name}\n\nProject: {task.project}\nTags: {', '.join(task.tags) if task.tags else 'None'}",
+            },
+        }
+
+        # Add URL if present for quicklook
+        url = extract_url_from_task(task)
+        if url:
+            item["quicklookurl"] = url
+
+        items.append(item)
+
+    # Output Alfred JSON format
+    alfred_output = {"items": items}
+    print(json.dumps(alfred_output, indent=2))
+
+
+@app.command()
 def test_complete():
     """Test the task completion functionality by completing a test task."""
     # Create a unique test task name
