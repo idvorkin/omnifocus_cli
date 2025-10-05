@@ -36,6 +36,49 @@ from rich.table import Table
 from rich.text import Text
 from rich import box
 import shlex
+from concurrent.futures import ThreadPoolExecutor
+import os
+from pathlib import Path
+
+
+# Timing log configuration
+TIMING_LOG_FILE = Path.home() / "tmp" / "omnifocus_timing.log"
+_current_command_context = "unknown"
+
+
+def set_command_context(command_name: str) -> None:
+    """Set the current command context for timing logs.
+
+    Args:
+        command_name: Name of the command being executed
+    """
+    global _current_command_context
+    _current_command_context = command_name
+
+
+def log_timing(operation: str, duration: float, details: str = "") -> None:
+    """Log timing information to the timing log file.
+
+    Args:
+        operation: Name of the operation being timed
+        duration: Duration in seconds
+        details: Optional additional details about the operation
+    """
+    try:
+        # Ensure the directory exists
+        TIMING_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+        # Format: timestamp | command | operation | duration_ms | details
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        duration_ms = f"{duration * 1000:.2f}ms"
+        details_str = f" | {details}" if details else ""
+        log_line = f"{timestamp} | {_current_command_context:15} | {operation:25} | {duration_ms:>10}{details_str}\n"
+
+        with open(TIMING_LOG_FILE, "a") as f:
+            f.write(log_line)
+    except Exception as e:
+        # Silently fail if logging doesn't work - don't break the main functionality
+        pass
 
 
 def parse_snooze_time(time_spec: str) -> datetime:
@@ -143,18 +186,49 @@ class OSXSystem:
     @staticmethod
     def run_javascript(script: str) -> str:
         """Run a JavaScript script using osascript."""
+        start_time = time.perf_counter()
         result = subprocess.run(
             ["osascript", "-l", "JavaScript", "-e", script],
             capture_output=True,
             text=True,
             check=True,
         )
+        duration = time.perf_counter() - start_time
+        log_timing("run_javascript", duration, f"script_length={len(script)}")
         return result.stdout
+
+    @staticmethod
+    def run_omni_automation(script: str) -> str:
+        """Run an Omni Automation script directly in OmniFocus (much faster than JXA).
+
+        Uses AppleScript's 'evaluate javascript' which runs the script in the
+        OmniFocus JavaScript context (OmniJS) instead of via Apple Events.
+        This is typically 10-100x faster than JXA for complex operations.
+        """
+        start_time = time.perf_counter()
+        # Escape the script for AppleScript string literal
+        # Keep newlines for proper JavaScript parsing
+        escaped = script.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
+        applescript = f'tell application "OmniFocus" to evaluate javascript "{escaped}"'
+        result = subprocess.run(
+            ["osascript", "-e", applescript],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        duration = time.perf_counter() - start_time
+        log_timing("run_omni_automation", duration, f"script_length={len(script)}")
+        return result.stdout.strip()
 
     @staticmethod
     def open_url(url: str) -> None:
         """Open a URL using the open command."""
+        start_time = time.perf_counter()
         subprocess.run(["open", url], check=True)
+        duration = time.perf_counter() - start_time
+        # Extract scheme for logging (e.g., "omnifocus", "https")
+        scheme = url.split("://")[0] if "://" in url else "unknown"
+        log_timing("open_url", duration, f"scheme={scheme}")
 
     @staticmethod
     def get_clipboard_content() -> str:
@@ -175,6 +249,7 @@ class OSXSystem:
         Raises:
             subprocess.CalledProcessError: If the command fails
         """
+        start_time = time.perf_counter()
         # Use shell=True with proper escaping for arguments that might contain special characters
         if args:
             escaped_args = [shlex.quote(arg) for arg in args]
@@ -185,6 +260,8 @@ class OSXSystem:
         result = subprocess.run(
             cmd_str, shell=True, capture_output=True, text=True, check=True
         )
+        duration = time.perf_counter() - start_time
+        log_timing("run_flow_command", duration, f"command={command}")
         return result.stdout.strip()
 
 
@@ -208,6 +285,7 @@ class LLMTaskShortener:
         Returns:
             str: Shortened task name, or original name if LLM fails
         """
+        start_time = time.perf_counter()
         try:
             prompt = f"""You are a productivity assistant helping to create concise flow session names from OmniFocus task descriptions.
 
@@ -242,24 +320,36 @@ Return only the shortened name, no explanation."""
 
             # Validate the response isn't empty and isn't too long
             if shortened_name and len(shortened_name) <= 50:
+                duration = time.perf_counter() - start_time
+                log_timing("llm_shorten_task", duration, f"model={self.model}, success=True")
                 return shortened_name
             else:
+                duration = time.perf_counter() - start_time
+                log_timing("llm_shorten_task", duration, f"model={self.model}, success=False, reason=invalid_response")
                 return task_name
 
         except subprocess.CalledProcessError as e:
             # Fallback to original name if llm command fails
+            duration = time.perf_counter() - start_time
+            log_timing("llm_shorten_task", duration, f"model={self.model}, success=False, reason=command_failed")
             console.print(f"[warning]llm command failed: {e}[/]")
             return task_name
         except subprocess.TimeoutExpired:
+            duration = time.perf_counter() - start_time
+            log_timing("llm_shorten_task", duration, f"model={self.model}, success=False, reason=timeout")
             console.print("[warning]llm command timed out[/]")
             return task_name
         except FileNotFoundError:
+            duration = time.perf_counter() - start_time
+            log_timing("llm_shorten_task", duration, f"model={self.model}, success=False, reason=not_found")
             console.print(
                 "[warning]llm command not found. Install with: pip install llm[/]"
             )
             return task_name
         except Exception as e:
             # Fallback to original name if LLM fails
+            duration = time.perf_counter() - start_time
+            log_timing("llm_shorten_task", duration, f"model={self.model}, success=False, reason=exception")
             console.print(f"[warning]LLM shortening failed: {e}[/]")
             return task_name
 
@@ -505,6 +595,107 @@ class OmniFocusManager:
             }}
         """
         return self.system.run_javascript(append_script)
+
+    def get_inbox_and_flagged_tasks_omni(self) -> Tuple[List[Task], List[Task]]:
+        """Get inbox and flagged tasks using Omni Automation (OmniJS) - much faster.
+
+        Returns:
+            Tuple of (inbox_tasks, flagged_tasks)
+        """
+        # Omni Automation script runs directly in OmniFocus, no Apple Events overhead
+        # Use 'inbox' property instead of filtering flattenedTasks for better performance
+        script = """
+(() => {
+    const inboxTasks = inbox.filter(t => !t.completed);
+    const flaggedTasks = flattenedTasks.filter(t => t.flagged && !t.completed);
+
+    function taskToObj(task) {
+        return {
+            name: task.name,
+            project: task.containingProject ? task.containingProject.name : "Inbox",
+            flagged: task.flagged,
+            tags: task.tags.map(t => t.name),
+            due_date: task.dueDate ? task.dueDate.toISOString() : null,
+            defer_date: task.deferDate ? task.deferDate.toISOString() : null,
+            estimated_minutes: task.estimatedMinutes || null,
+            completed: task.completed,
+            creation_date: task.added ? task.added.toISOString() : null,
+            id: task.id.primaryKey,
+            note: task.note
+        };
+    }
+
+    return JSON.stringify({
+        inbox: inboxTasks.map(taskToObj),
+        flagged: flaggedTasks.map(taskToObj)
+    });
+})()
+"""
+        result = self.system.run_omni_automation(script)
+        data = json.loads(result)
+        inbox_tasks = [Task.model_validate(task) for task in data["inbox"]]
+        flagged_tasks = [Task.model_validate(task) for task in data["flagged"]]
+        return inbox_tasks, flagged_tasks
+
+    def get_inbox_and_flagged_tasks(self) -> Tuple[List[Task], List[Task]]:
+        """Get inbox and flagged tasks in a single query for performance.
+
+        Returns:
+            Tuple of (inbox_tasks, flagged_tasks)
+        """
+        javascript = """
+            function run() {
+                const of = Application('OmniFocus');
+                of.includeStandardAdditions = true;
+
+                const doc = of.defaultDocument;
+
+                // Get all incomplete tasks once
+                const allTasks = doc.flattenedTasks.whose({completed: false})();
+
+                const inboxTasks = [];
+                const flaggedTasks = [];
+
+                function taskToObj(task) {
+                    return {
+                        name: task.name(),
+                        project: task.containingProject() ? task.containingProject().name() : "Inbox",
+                        flagged: task.flagged(),
+                        tags: Array.from(task.tags()).map(t => t.name()),
+                        due_date: task.dueDate() ? task.dueDate().toISOString() : null,
+                        defer_date: task.deferDate() ? task.deferDate().toISOString() : null,
+                        estimated_minutes: task.estimatedMinutes(),
+                        completed: task.completed(),
+                        creation_date: task.creationDate() ? task.creationDate().toISOString() : null,
+                        id: task.id(),
+                        note: task.note()
+                    };
+                }
+
+                // Filter in JavaScript to avoid multiple OmniFocus queries
+                for (let i = 0; i < allTasks.length; i++) {
+                    const task = allTasks[i];
+                    if (task.inInbox()) {
+                        inboxTasks.push(taskToObj(task));
+                    }
+                    if (task.flagged()) {
+                        flaggedTasks.push(taskToObj(task));
+                    }
+                }
+
+                const result = {
+                    inbox: inboxTasks,
+                    flagged: flaggedTasks
+                };
+
+                return JSON.stringify(result);
+            }
+        """
+        result = self.system.run_javascript(javascript)
+        data = json.loads(result)
+        inbox_tasks = [Task.model_validate(task) for task in data["inbox"]]
+        flagged_tasks = [Task.model_validate(task) for task in data["flagged"]]
+        return inbox_tasks, flagged_tasks
 
     def get_inbox_tasks(self) -> List[Task]:
         """Get all tasks from the inbox."""
@@ -1036,6 +1227,7 @@ def list_grouped_tasks(
     ] = View.by_project,
 ):
     """List all tasks, grouped by either project or tag"""
+    set_command_context("list_grouped_tasks")
     tasks = manager.get_all_tasks()
 
     if view == View.by_project:
@@ -1113,6 +1305,7 @@ def list_grouped_tasks(
 @app.command(name="flagged")
 def list_flagged():
     """Show flagged tasks with consistent index numbers from interesting command"""
+    set_command_context("flagged")
     # Get the same task list as interesting command for consistent numbering
     all_interesting_tasks = _get_interesting_tasks()
 
@@ -1182,6 +1375,7 @@ def add(
     ] = False,
 ):
     """Create a task. If the input looks like a URL, it will fetch the page title and use it as the task name."""
+    set_command_context("add")
     if clipboard:
         if task is not None:  # Check if task was explicitly provided
             console.print("[warning]Ignoring task argument as --clipboard is used.[/]")
@@ -1657,8 +1851,8 @@ def extract_url_from_task(task: Task) -> Optional[str]:
 
 def _get_interesting_tasks() -> List[Tuple[str, Task]]:
     """Get deduplicated list of inbox and flagged tasks with their sources."""
-    inbox_tasks = manager.get_inbox_tasks()
-    flagged_tasks = manager.get_flagged_tasks()
+    # Use Omni Automation for much faster performance
+    inbox_tasks, flagged_tasks = manager.get_inbox_and_flagged_tasks_omni()
 
     # Remove duplicates (tasks that are both in inbox and flagged)
     seen_names = set()
@@ -1729,6 +1923,7 @@ def _get_task_by_number(task_num: int) -> Tuple[str, Task]:
 @app.command()
 def interesting():
     """Show numbered list of inbox and flagged tasks"""
+    set_command_context("interesting")
     all_tasks = _get_interesting_tasks()
 
     # Early return if no tasks
@@ -1747,6 +1942,7 @@ def interesting():
 @app.command()
 def ainteresting():
     """Output interesting tasks in Alfred JSON format for workflow integration"""
+    set_command_context("ainteresting")
     all_tasks = _get_interesting_tasks()
 
     # Sort by creation date, most recent first
@@ -1977,6 +2173,7 @@ def complete(
         omnifocus complete 1 3 5
         todo complete 2 4 --dry-run
     """
+    set_command_context("complete")
     # Early return if no task numbers provided
     if not task_nums:
         interesting()
@@ -2147,6 +2344,7 @@ def open_task(
     ],
 ):
     """Open the URL from a task by its number from the interesting command."""
+    set_command_context("open_task")
     try:
         source, selected_task = _get_task_by_number(task_num)
 
@@ -2187,6 +2385,7 @@ def flow(
     ] = False,
 ):
     """Start a flow session with task name using flow-go directly."""
+    set_command_context("flow")
     try:
         source, selected_task = _get_task_by_number(task_num)
 
@@ -2264,6 +2463,7 @@ def snooze(
         omnifocus snooze 3 week
         omnifocus snooze 5 month
     """
+    set_command_context("snooze")
     try:
         # Validate time specification
         try:
