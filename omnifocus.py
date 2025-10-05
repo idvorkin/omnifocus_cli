@@ -2169,6 +2169,55 @@ def _get_tasks_for_completion(
     return tasks_to_complete
 
 
+def _select_tasks_with_fzf() -> Optional[List[int]]:
+    """Use fzf to interactively select tasks to complete.
+
+    Returns:
+        List of task numbers or None if cancelled/error
+    """
+    all_tasks = _get_interesting_tasks()
+    if not all_tasks:
+        typer.echo(NO_TASKS_FOUND_ERROR)
+        return None
+
+    # Format tasks for fzf
+    task_lines = []
+    for i, (source, task) in enumerate(all_tasks, 1):
+        task_lines.append(_format_task_line(i, source, task))
+
+    # Pipe to fzf for selection
+    try:
+        result = subprocess.run(
+            ["fzf", "--multi", "--prompt=Select tasks to complete > "],
+            input="\n".join(task_lines),
+            capture_output=True,
+            text=True,
+        )
+
+        if result.returncode != 0:  # User cancelled
+            return None
+
+        # Parse selected task numbers from fzf output
+        selected_lines = result.stdout.strip().split("\n")
+        task_nums = []
+        for line in selected_lines:
+            if line:
+                # Extract task number from start of line (format: " 1. ...")
+                match = re.match(r"^\s*(\d+)\.", line)
+                if match:
+                    task_nums.append(int(match.group(1)))
+
+        return task_nums if task_nums else None
+
+    except FileNotFoundError:
+        typer.echo("✗ fzf not found. Please install fzf to use this feature.")
+        typer.echo("  Install with: brew install fzf")
+        return None
+    except Exception as e:
+        typer.echo(f"✗ Error running fzf: {e}")
+        return None
+
+
 def _get_tasks_for_completion_from_list(
     task_nums: List[int],
 ) -> Optional[List[Tuple[int, str, Task]]]:
@@ -2222,8 +2271,18 @@ def complete(
             help="Skip confirmation prompts when completing multiple tasks",
         ),
     ] = False,
+    no_fzf: Annotated[
+        bool,
+        typer.Option(
+            "--no-fzf",
+            help="Disable fzf interactive selection (show list instead)",
+        ),
+    ] = False,
 ):
     """List interesting tasks and complete specified task numbers.
+
+    When no task numbers are provided and running interactively, fzf is used
+    for interactive selection. Use --no-fzf to disable this and show the list.
 
     When completing multiple tasks, each task will be shown with a confirmation
     prompt before completion. Use --no-confirm to skip prompts for automation.
@@ -2233,8 +2292,24 @@ def complete(
         omnifocus complete 1
         omnifocus complete 1 3 5
         todo complete 2 4 --dry-run
+        todo complete              # uses fzf if interactive
+        todo complete --no-fzf     # shows list instead
     """
     set_command_context("complete")
+
+    # Auto-detect fzf mode: use if no task nums, interactive TTY, and not disabled
+    use_fzf = (
+        not task_nums
+        and not no_fzf
+        and os.isatty(0)  # stdin is a TTY (interactive)
+    )
+
+    # Handle fzf mode
+    if use_fzf:
+        task_nums = _select_tasks_with_fzf()
+        if not task_nums:
+            return
+
     # Early return if no task numbers provided
     if not task_nums:
         interesting()
@@ -2459,14 +2534,50 @@ def alfred_next(
 @app.command()
 def open_task(
     task_num: Annotated[
-        int,
+        Optional[int],
         typer.Argument(
             help="Task number from the interesting command to open URL from"
         ),
-    ],
+    ] = None,
+    no_fzf: Annotated[
+        bool,
+        typer.Option(
+            "--no-fzf",
+            help="Disable fzf interactive selection (show list instead)",
+        ),
+    ] = False,
 ):
-    """Open the URL from a task by its number from the interesting command."""
+    """Open the URL from a task by its number from the interesting command.
+
+    When no task number is provided and running interactively, fzf is used
+    for interactive selection. Use --no-fzf to disable this and show the list.
+
+    Examples:
+        todo open-task 1
+        todo open-task              # uses fzf if interactive
+        todo open-task --no-fzf     # shows list instead
+    """
     set_command_context("open_task")
+
+    # Auto-detect fzf mode: use if no task num, interactive TTY, and not disabled
+    use_fzf = (
+        task_num is None
+        and not no_fzf
+        and os.isatty(0)  # stdin is a TTY (interactive)
+    )
+
+    # Handle fzf mode
+    if use_fzf:
+        task_nums = _select_tasks_with_fzf()
+        if not task_nums:
+            return
+        task_num = task_nums[0]  # Only use first selection
+
+    # Early return if no task number provided
+    if task_num is None:
+        interesting()
+        return
+
     try:
         source, selected_task = _get_task_by_number(task_num)
 
@@ -2490,11 +2601,11 @@ def open_task(
 @app.command()
 def flow(
     task_num: Annotated[
-        int,
+        Optional[int],
         typer.Argument(
             help="Task number from the interesting command to use as flow session name"
         ),
-    ],
+    ] = None,
     no_shorten: Annotated[
         bool,
         typer.Option("--no-shorten", help="Disable LLM-powered task name shortening"),
@@ -2505,9 +2616,46 @@ def flow(
             "--dry-run", help="Show what would happen without starting the session"
         ),
     ] = False,
+    no_fzf: Annotated[
+        bool,
+        typer.Option(
+            "--no-fzf",
+            help="Disable fzf interactive selection (show list instead)",
+        ),
+    ] = False,
 ):
-    """Start a flow session with task name using flow-go directly."""
+    """Start a flow session with task name using flow-go directly.
+
+    When no task number is provided and running interactively, fzf is used
+    for interactive selection. Use --no-fzf to disable this and show the list.
+
+    Examples:
+        todo flow 1
+        todo flow                   # uses fzf if interactive
+        todo flow --no-fzf          # shows list instead
+        todo flow 3 --no-shorten
+    """
     set_command_context("flow")
+
+    # Auto-detect fzf mode: use if no task num, interactive TTY, and not disabled
+    use_fzf = (
+        task_num is None
+        and not no_fzf
+        and os.isatty(0)  # stdin is a TTY (interactive)
+    )
+
+    # Handle fzf mode
+    if use_fzf:
+        task_nums = _select_tasks_with_fzf()
+        if not task_nums:
+            return
+        task_num = task_nums[0]  # Only use first selection
+
+    # Early return if no task number provided
+    if task_num is None:
+        interesting()
+        return
+
     try:
         source, selected_task = _get_task_by_number(task_num)
 
