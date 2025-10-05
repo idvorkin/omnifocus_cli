@@ -483,33 +483,31 @@ class OmniFocusManager:
         return True
 
     def get_incomplete_tasks(self) -> List[Task]:
-        """Get all incomplete tasks with their IDs, names and notes."""
-        javascript = """
-            function run() {
-                const of = Application('OmniFocus');
-                of.includeStandardAdditions = true;
+        """Get all incomplete tasks with their IDs, names and notes using Omni Automation (fast)."""
+        script = """
+(() => {
+    const tasks = flattenedTasks.filter(t => !t.completed);
 
-                const doc = of.defaultDocument;
-                const tasks = doc.flattenedTasks.whose({completed: false})();
+    function taskToObj(task) {
+        return {
+            id: task.id.primaryKey,
+            name: task.name,
+            note: task.note,
+            project: task.containingProject ? task.containingProject.name : "No Project",
+            flagged: task.flagged,
+            tags: task.tags.map(t => t.name),
+            due_date: task.dueDate ? task.dueDate.toISOString() : null,
+            defer_date: task.deferDate ? task.deferDate.toISOString() : null,
+            estimated_minutes: task.estimatedMinutes || null,
+            completed: task.completed,
+            creation_date: task.added ? task.added.toISOString() : null
+        };
+    }
 
-                const taskList = tasks.map(task => ({
-                    id: task.id(),
-                    name: task.name(),
-                    note: task.note(),
-                    project: task.containingProject() ? task.containingProject().name() : "No Project",
-                    flagged: task.flagged(),
-                    tags: Array.from(task.tags()).map(t => t.name()),
-                    due_date: task.dueDate() ? task.dueDate().toISOString() : null,
-                    defer_date: task.deferDate() ? task.deferDate().toISOString() : null,
-                    estimated_minutes: task.estimatedMinutes(),
-                    completed: task.completed(),
-                    creation_date: task.creationDate() ? task.creationDate().toISOString() : null
-                }));
-
-                return JSON.stringify(taskList);
-            }
-        """
-        result = self.system.run_javascript(javascript)
+    return JSON.stringify(tasks.map(taskToObj));
+})()
+"""
+        result = self.system.run_omni_automation(script)
         tasks_data = json.loads(result)
         return [Task.model_validate(task) for task in tasks_data]
 
@@ -1474,7 +1472,9 @@ def add(
 @app.command()
 def fixup_url():
     """Find tasks that have empty names or URLs as names, and update them with webpage titles."""
-    all_tasks = manager.get_all_tasks()
+    set_command_context("fixup_url")
+    # Use faster method to get incomplete tasks
+    all_tasks = manager.get_incomplete_tasks()
 
     # Find tasks with URLs in notes or as names
     url_pattern = r'(https?://[^\s)"]+)'
