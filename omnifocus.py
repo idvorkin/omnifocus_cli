@@ -250,12 +250,14 @@ class OSXSystem:
             subprocess.CalledProcessError: If the command fails
         """
         start_time = time.perf_counter()
+        y_path = str(Path.home() / ".local" / "bin" / "y")
+
         # Use shell=True with proper escaping for arguments that might contain special characters
         if args:
             escaped_args = [shlex.quote(arg) for arg in args]
-            cmd_str = f"y {command} {' '.join(escaped_args)}"
+            cmd_str = f"{y_path} {command} {' '.join(escaped_args)}"
         else:
-            cmd_str = f"y {command}"
+            cmd_str = f"{y_path} {command}"
 
         result = subprocess.run(
             cmd_str, shell=True, capture_output=True, text=True, check=True
@@ -266,18 +268,38 @@ class OSXSystem:
 
 
 class LLMTaskShortener:
-    """Humble object for LLM-powered task name shortening using Simon Willison's llm CLI."""
+    """Humble object for LLM-powered task name shortening using Groq API."""
 
-    def __init__(self, model: str = "gpt-4o-mini"):
+    def __init__(self, model: str = "meta-llama/llama-4-maverick-17b-128e-instruct"):
         """Initialize the LLM task shortener.
 
         Args:
-            model: Model to use with llm CLI (defaults to gpt-4o-mini)
+            model: Model to use with Groq API (defaults to Llama 4 Maverick)
         """
         self.model = model
+        self.api_key = self._get_api_key()
+
+    def _get_api_key(self) -> str | None:
+        """Get Groq API key from environment or secretBox.json."""
+        # First check environment variable
+        api_key = os.getenv("GROQ_API_KEY")
+        if api_key:
+            return api_key
+
+        # Try to load from secretBox.json
+        try:
+            secret_box_path = Path.home() / "gits" / "igor2" / "secretBox.json"
+            if secret_box_path.exists():
+                with open(secret_box_path) as f:
+                    secrets = json.load(f)
+                return secrets.get("GROQ_API_KEY")
+        except Exception:
+            pass
+
+        return None
 
     def shorten_task_name(self, task_name: str) -> str:
-        """Shorten a task name using LLM via the llm CLI tool.
+        """Shorten a task name using LLM via Groq API.
 
         Args:
             task_name: The original task name to shorten
@@ -286,10 +308,15 @@ class LLMTaskShortener:
             str: Shortened task name, or original name if LLM fails
         """
         start_time = time.perf_counter()
-        try:
-            prompt = f"""You are a productivity assistant helping to create concise flow session names from OmniFocus task descriptions.
 
-Task: "{task_name}"
+        if not self.api_key:
+            console.print("[warning]GROQ_API_KEY not found. Skipping task shortening.[/]")
+            return task_name
+
+        try:
+            import requests
+
+            system_prompt = """You are a productivity assistant helping to create concise flow session names from OmniFocus task descriptions.
 
 Create a short, focused session name (2-6 words) that captures the essential action and context. Follow these guidelines:
 
@@ -307,16 +334,42 @@ Examples:
 
 Return only the shortened name, no explanation."""
 
-            # Use llm CLI tool to get the shortened name
-            result = subprocess.run(
-                ["llm", "-m", self.model, prompt],
-                capture_output=True,
-                text=True,
-                timeout=10.0,
-                check=True,
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+            }
+
+            payload = {
+                "model": self.model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f'Task: "{task_name}"'},
+                ],
+                "max_tokens": 100,
+                "temperature": 0.3,
+            }
+
+            response = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers=headers,
+                json=payload,
+                timeout=10,
             )
 
-            shortened_name = result.stdout.strip()
+            if response.status_code != 200:
+                duration = time.perf_counter() - start_time
+                log_timing("llm_shorten_task", duration, f"model={self.model}, success=False, reason=api_error")
+                console.print(f"[warning]Groq API error: {response.status_code}[/]")
+                return task_name
+
+            response_data = response.json()
+
+            if "choices" not in response_data or not response_data["choices"]:
+                duration = time.perf_counter() - start_time
+                log_timing("llm_shorten_task", duration, f"model={self.model}, success=False, reason=no_response")
+                return task_name
+
+            shortened_name = response_data["choices"][0]["message"]["content"].strip()
 
             # Validate the response isn't empty and isn't too long
             if shortened_name and len(shortened_name) <= 50:
@@ -328,29 +381,11 @@ Return only the shortened name, no explanation."""
                 log_timing("llm_shorten_task", duration, f"model={self.model}, success=False, reason=invalid_response")
                 return task_name
 
-        except subprocess.CalledProcessError as e:
-            # Fallback to original name if llm command fails
-            duration = time.perf_counter() - start_time
-            log_timing("llm_shorten_task", duration, f"model={self.model}, success=False, reason=command_failed")
-            console.print(f"[warning]llm command failed: {e}[/]")
-            return task_name
-        except subprocess.TimeoutExpired:
-            duration = time.perf_counter() - start_time
-            log_timing("llm_shorten_task", duration, f"model={self.model}, success=False, reason=timeout")
-            console.print("[warning]llm command timed out[/]")
-            return task_name
-        except FileNotFoundError:
-            duration = time.perf_counter() - start_time
-            log_timing("llm_shorten_task", duration, f"model={self.model}, success=False, reason=not_found")
-            console.print(
-                "[warning]llm command not found. Install with: pip install llm[/]"
-            )
-            return task_name
         except Exception as e:
-            # Fallback to original name if LLM fails
+            # Fallback to original name if API call fails
             duration = time.perf_counter() - start_time
             log_timing("llm_shorten_task", duration, f"model={self.model}, success=False, reason=exception")
-            console.print(f"[warning]LLM shortening failed: {e}[/]")
+            console.print(f"[warning]Groq API failed: {e}[/]")
             return task_name
 
 
@@ -1920,6 +1955,30 @@ def _get_task_by_number(task_num: int) -> Tuple[str, Task]:
     return all_tasks[task_num - 1]
 
 
+def _get_task_by_id(task_id: str) -> Tuple[str, Task]:
+    """Get a task by its ID from the interesting tasks list.
+
+    Args:
+        task_id: The task ID (GUID)
+
+    Returns:
+        Tuple of (source, task)
+
+    Raises:
+        ValueError: If no tasks available or task ID not found
+    """
+    all_tasks = _get_interesting_tasks()
+
+    if not all_tasks:
+        raise ValueError(NO_TASKS_FOUND_ERROR)
+
+    for source, task in all_tasks:
+        if task.id == task_id:
+            return (source, task)
+
+    raise ValueError(f"Task with ID '{task_id}' not found in interesting tasks")
+
+
 @app.command()
 def interesting():
     """Show numbered list of inbox and flagged tasks"""
@@ -1978,12 +2037,15 @@ def ainteresting():
         title_parts.append(task.name)
         title = " ".join(title_parts)
 
-        # Build Alfred item
+        # Determine action based on task content
+        url = extract_url_from_task(task)
+
+        # Build Alfred item - use task ID instead of index for stability
         item = {
             "uid": task.id or f"task-{i}",
             "title": title,
             "subtitle": subtitle,
-            "arg": str(i),  # Pass task number for use in other commands
+            "arg": url if url else f"flow:{task.id}",  # URL to open, or flow command with task ID
             "autocomplete": task.name,
             "valid": True,
             "match": task.name,  # Allow Alfred to match on task name
@@ -1993,8 +2055,7 @@ def ainteresting():
             },
         }
 
-        # Add URL if present for quicklook
-        url = extract_url_from_task(task)
+        # Add URL for quicklook if present
         if url:
             item["quicklookurl"] = url
 
@@ -2332,6 +2393,67 @@ def manage_tags(
         typer.echo(
             "No tag operation specified. Use --add, --remove, or --clear to manage tags."
         )
+
+
+@app.command()
+def alfred_next(
+    arg: Annotated[
+        str,
+        typer.Argument(
+            help="Either a URL to open or 'flow:<task_id>' to start flow with task ID"
+        ),
+    ],
+):
+    """Handle next action: open URL or start flow session based on arg from ainteresting.
+
+    NOTE: This command is designed for Alfred workflow integration and runs NON-INTERACTIVELY.
+    It does NOT prompt for session name editing like the regular 'flow' command.
+    """
+    set_command_context("alfred_next")
+    try:
+        # Check if it's a flow command
+        if arg.startswith("flow:"):
+            task_id = arg[5:]  # Remove 'flow:' prefix
+
+            # Start flow session for this task using task ID
+            source, selected_task = _get_task_by_id(task_id)
+            console.print(f"[info]Task:[/] [bold]{selected_task.name}[/]")
+
+            # Start with the original task name
+            session_name = selected_task.name
+
+            # Apply LLM shortening (non-interactive for Alfred)
+            try:
+                shortener = LLMTaskShortener()
+                session_name = shortener.shorten_task_name(selected_task.name)
+            except Exception as e:
+                console.print(f"[warning]LLM shortening failed: {e}[/]")
+                console.print("[info]Continuing with original task name...[/]")
+
+            # Execute the flow command using flow-go directly (no interactive editing)
+            system.run_flow_command("flow-go", session_name)
+            console.print(f"\n[green]✓[/] Started flow session: {session_name}")
+            console.print(f"  [info]From task:[/] {selected_task.name}")
+
+        # Otherwise treat it as a URL to open
+        elif arg.startswith("http://") or arg.startswith("https://"):
+            system.open_url(arg)
+            console.print(f"[green]✓[/] Opened URL: {arg}")
+
+        else:
+            console.print(f"[red]✗[/] Invalid argument: {arg}")
+            console.print("[info]Expected either a URL or 'flow:<task_id>' format[/]")
+
+    except ValueError as e:
+        console.print(f"[red]✗[/] {str(e)}")
+    except subprocess.CalledProcessError as e:
+        console.print(f"[red]✗[/] Failed to start flow session: {e}")
+    except FileNotFoundError:
+        console.print(
+            "[red]✗[/] Flow command 'y' not found. Make sure it's installed and in your PATH."
+        )
+    except Exception as e:
+        console.print(f"[red]✗[/] Error: {e}")
 
 
 @app.command()

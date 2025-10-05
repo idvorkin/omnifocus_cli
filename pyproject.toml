@@ -33,8 +33,8 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-v"
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest>=7.0.0",
     "ruff>=0.1.6",
 ]
