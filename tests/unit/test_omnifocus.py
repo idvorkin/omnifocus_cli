@@ -25,6 +25,7 @@ Test Coverage:
 """
 
 import json
+from pathlib import Path
 from unittest.mock import patch, MagicMock, call
 import pytest
 from typer.testing import CliRunner
@@ -459,7 +460,7 @@ def test_add_command_with_clipboard_flag_complex(mock_app_system, mock_app_manag
 @patch("omnifocus.manager")
 def test_fixup_url(mock_manager, mock_requests):
     """Test fixing tasks with URLs."""
-    mock_manager.get_all_tasks.return_value = [
+    mock_manager.get_incomplete_tasks.return_value = [
         Task(id="task1", name="", note="Source: https://example.com"),
         Task(id="task2", name="Regular task", note=""),
         Task(id="task3", name="", note="Source: https://example.org"),
@@ -478,14 +479,14 @@ def test_fixup_url(mock_manager, mock_requests):
 
     mock_manager.update_name.assert_has_calls(
         [
-            call(mock_manager.get_all_tasks.return_value[0], "Example Website"),
-            call(mock_manager.get_all_tasks.return_value[2], "Example Org"),
+            call(mock_manager.get_incomplete_tasks.return_value[0], "Example Website"),
+            call(mock_manager.get_incomplete_tasks.return_value[2], "Example Org"),
         ]
     )
 
     # update_note is not called in this case because the URLs are already in the notes
     # mock_manager.update_note.assert_called_once_with(
-    #     mock_manager.get_all_tasks.return_value[0], "Source: https://example.com"
+    #     mock_manager.get_incomplete_tasks.return_value[0], "Source: https://example.com"
     # )
 
 
@@ -494,7 +495,7 @@ def test_fixup_url(mock_manager, mock_requests):
 def test_fixup_url_error_handling(mock_manager, mock_requests):
     """Test error handling in fixup-url command."""
     # Mock tasks with URLs
-    mock_manager.get_all_tasks.return_value = [
+    mock_manager.get_incomplete_tasks.return_value = [
         Task(id="task1", name="https://example.com", note=""),
     ]
 
@@ -521,7 +522,7 @@ def test_fixup_url_error_handling(mock_manager, mock_requests):
 
     # Verify only one task was updated
     mock_manager.update_name.assert_called_once_with(
-        mock_manager.get_all_tasks.return_value[0], "Example Website"
+        mock_manager.get_incomplete_tasks.return_value[0], "Example Website"
     )
 
 
@@ -530,7 +531,7 @@ def test_fixup_url_error_handling(mock_manager, mock_requests):
 def test_fixup_url_with_url_names(mock_manager, mock_requests):
     """Test fixing tasks that have URLs as their names."""
     # Mock tasks with URLs as names
-    mock_manager.get_all_tasks.return_value = [
+    mock_manager.get_incomplete_tasks.return_value = [
         Task(id="task1", name="https://example.com", note=""),
         Task(id="task2", name="Regular task", note=""),
         Task(id="task3", name="https://example.org", note=""),
@@ -564,8 +565,8 @@ def test_fixup_url_with_url_names(mock_manager, mock_requests):
     # Verify task updates
     mock_manager.update_name.assert_has_calls(
         [
-            call(mock_manager.get_all_tasks.return_value[0], "Example Website"),
-            call(mock_manager.get_all_tasks.return_value[2], "Example Org"),
+            call(mock_manager.get_incomplete_tasks.return_value[0], "Example Website"),
+            call(mock_manager.get_incomplete_tasks.return_value[2], "Example Org"),
         ]
     )
 
@@ -573,11 +574,11 @@ def test_fixup_url_with_url_names(mock_manager, mock_requests):
     mock_manager.update_note.assert_has_calls(
         [
             call(
-                mock_manager.get_all_tasks.return_value[0],
+                mock_manager.get_incomplete_tasks.return_value[0],
                 "Source: https://example.com",
             ),
             call(
-                mock_manager.get_all_tasks.return_value[2],
+                mock_manager.get_incomplete_tasks.return_value[2],
                 "Source: https://example.org",
             ),
         ]
@@ -589,7 +590,7 @@ def test_fixup_url_with_url_names(mock_manager, mock_requests):
 def test_fixup_url_with_url_in_name(mock_manager, mock_requests):
     """Test fixing tasks that have URLs as their names, ensuring URL is moved to note."""
     # Mock tasks with URLs as names
-    mock_manager.get_all_tasks.return_value = [
+    mock_manager.get_incomplete_tasks.return_value = [
         Task(id="task1", name="https://example.com", note=""),
     ]
 
@@ -609,10 +610,10 @@ def test_fixup_url_with_url_in_name(mock_manager, mock_requests):
 
     # Verify the order of operations - note should be updated before title
     mock_manager.update_note.assert_called_once_with(
-        mock_manager.get_all_tasks.return_value[0], "Source: https://example.com"
+        mock_manager.get_incomplete_tasks.return_value[0], "Source: https://example.com"
     )
     mock_manager.update_name.assert_called_once_with(
-        mock_manager.get_all_tasks.return_value[0], "Example Website"
+        mock_manager.get_incomplete_tasks.return_value[0], "Example Website"
     )
 
     # Verify URL request
@@ -626,7 +627,7 @@ def test_fixup_url_with_url_in_name(mock_manager, mock_requests):
 def test_fixup_url_with_url_in_note(mock_manager, mock_requests):
     """Test fixing tasks that have empty names with URLs in notes."""
     # Mock tasks with URLs in notes
-    mock_manager.get_all_tasks.return_value = [
+    mock_manager.get_incomplete_tasks.return_value = [
         Task(id="task1", name="", note="Source: https://example.org"),
     ]
 
@@ -647,7 +648,7 @@ def test_fixup_url_with_url_in_note(mock_manager, mock_requests):
     # Verify only title was updated, note wasn't touched
     mock_manager.update_note.assert_not_called()
     mock_manager.update_name.assert_called_once_with(
-        mock_manager.get_all_tasks.return_value[0], "Example Org"
+        mock_manager.get_incomplete_tasks.return_value[0], "Example Org"
     )
 
     # Verify URL request
@@ -661,7 +662,7 @@ def test_fixup_url_with_url_in_note(mock_manager, mock_requests):
 def test_fixup_url_note_update_error(mock_manager, mock_requests):
     """Test error handling in fixup_url command when updating note and title."""
     # Mock tasks with URLs as names
-    mock_manager.get_all_tasks.return_value = [
+    mock_manager.get_incomplete_tasks.return_value = [
         Task(id="task1", name="https://example.com", note=""),
     ]
 
@@ -854,32 +855,35 @@ def test_get_all_tags(manager, mock_system):
 def test_complete_command_no_args(mock_manager):
     """Test complete command with no arguments shows interesting tasks."""
     # Mock the methods that interesting command uses
-    mock_manager.get_inbox_tasks.return_value = [
-        Task(id="1", name="Task 1", project="Inbox", flagged=False),
-    ]
-    mock_manager.get_flagged_tasks.return_value = [
-        Task(id="2", name="Task 2", project="Work", flagged=True),
-    ]
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [
+            Task(id="1", name="Task 1", project="Inbox", flagged=False),
+        ],
+        [
+            Task(id="2", name="Task 2", project="Work", flagged=True),
+        ],
+    )
 
     result = runner.invoke(app, ["complete"])
     assert result.exit_code == 0
     assert "Task 1" in result.stdout
     assert "Task 2" in result.stdout
-    mock_manager.get_inbox_tasks.assert_called()
-    mock_manager.get_flagged_tasks.assert_called()
+    mock_manager.get_inbox_and_flagged_tasks_omni.assert_called()
 
 
 @patch("omnifocus.manager")
 def test_complete_command_dry_run(mock_manager):
     """Test complete command with dry-run flag."""
     # Mock the methods that complete command uses
-    mock_manager.get_inbox_tasks.return_value = [
-        Task(id="1", name="Task 1", project="Inbox", flagged=False),
-    ]
-    mock_manager.get_flagged_tasks.return_value = [
-        Task(id="2", name="Task 2", project="Work", flagged=True),
-        Task(id="3", name="Task 3", project="Personal", flagged=True),
-    ]
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [
+            Task(id="1", name="Task 1", project="Inbox", flagged=False),
+        ],
+        [
+            Task(id="2", name="Task 2", project="Work", flagged=True),
+            Task(id="3", name="Task 3", project="Personal", flagged=True),
+        ],
+    )
 
     result = runner.invoke(app, ["complete", "1", "3", "--dry-run"])
     assert result.exit_code == 0
@@ -889,21 +893,22 @@ def test_complete_command_dry_run(mock_manager):
 
     # Verify no tasks were actually completed
     mock_manager.complete.assert_not_called()
-    mock_manager.get_inbox_tasks.assert_called()
-    mock_manager.get_flagged_tasks.assert_called()
+    mock_manager.get_inbox_and_flagged_tasks_omni.assert_called()
 
 
 @patch("omnifocus.manager")
 def test_complete_command_actual_completion(mock_manager):
     """Test complete command actually completing tasks."""
     # Mock the methods that complete command uses
-    mock_manager.get_inbox_tasks.return_value = [
-        Task(id="1", name="Task 1", project="Inbox", flagged=False),
-    ]
-    mock_manager.get_flagged_tasks.return_value = [
-        Task(id="2", name="Task 2", project="Work", flagged=True),
-        Task(id="3", name="Task 3", project="Personal", flagged=True),
-    ]
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [
+            Task(id="1", name="Task 1", project="Inbox", flagged=False),
+        ],
+        [
+            Task(id="2", name="Task 2", project="Work", flagged=True),
+            Task(id="3", name="Task 3", project="Personal", flagged=True),
+        ],
+    )
 
     # Mock successful completion
     mock_manager.complete.return_value = "Task completed successfully"
@@ -925,12 +930,14 @@ def test_complete_command_actual_completion(mock_manager):
 def test_complete_command_invalid_task_numbers(mock_manager):
     """Test complete command with invalid task numbers."""
     # Mock the methods that complete command uses
-    mock_manager.get_inbox_tasks.return_value = [
-        Task(id="1", name="Task 1", project="Inbox", flagged=False),
-    ]
-    mock_manager.get_flagged_tasks.return_value = [
-        Task(id="2", name="Task 2", project="Work", flagged=True),
-    ]
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [
+            Task(id="1", name="Task 1", project="Inbox", flagged=False),
+        ],
+        [
+            Task(id="2", name="Task 2", project="Work", flagged=True),
+        ],
+    )
 
     result = runner.invoke(app, ["complete", "1", "5", "2"])
     assert result.exit_code == 0
@@ -948,10 +955,12 @@ def test_complete_command_invalid_task_numbers(mock_manager):
 def test_complete_command_invalid_number_format(mock_manager):
     """Test complete command with invalid number format."""
     # Mock the methods that complete command uses
-    mock_manager.get_inbox_tasks.return_value = [
-        Task(id="1", name="Task 1", project="Inbox", flagged=False),
-    ]
-    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [
+            Task(id="1", name="Task 1", project="Inbox", flagged=False),
+        ],
+        [],
+    )
 
     result = runner.invoke(app, ["complete", "abc", "1"])
     # With varargs, typer will catch the invalid "abc" argument type
@@ -965,12 +974,14 @@ def test_complete_command_invalid_number_format(mock_manager):
 def test_complete_command_completion_error(mock_manager):
     """Test complete command when task completion fails."""
     # Mock the methods that complete command uses
-    mock_manager.get_inbox_tasks.return_value = [
-        Task(id="1", name="Task 1", project="Inbox", flagged=False),
-    ]
-    mock_manager.get_flagged_tasks.return_value = [
-        Task(id="2", name="Task 2", project="Work", flagged=True),
-    ]
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [
+            Task(id="1", name="Task 1", project="Inbox", flagged=False),
+        ],
+        [
+            Task(id="2", name="Task 2", project="Work", flagged=True),
+        ],
+    )
 
     # Mock completion failure for first task, success for second
     mock_manager.complete.side_effect = [Exception("Completion failed"), "Success"]
@@ -988,12 +999,14 @@ def test_complete_command_completion_error(mock_manager):
 def test_complete_command_dry_run_invalid_numbers(mock_manager):
     """Test complete command dry-run with invalid task numbers."""
     # Mock the methods that complete command uses
-    mock_manager.get_inbox_tasks.return_value = [
-        Task(id="1", name="Task 1", project="Inbox", flagged=False),
-    ]
-    mock_manager.get_flagged_tasks.return_value = [
-        Task(id="2", name="Task 2", project="Work", flagged=True),
-    ]
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [
+            Task(id="1", name="Task 1", project="Inbox", flagged=False),
+        ],
+        [
+            Task(id="2", name="Task 2", project="Work", flagged=True),
+        ],
+    )
 
     result = runner.invoke(app, ["complete", "1", "5", "2", "--dry-run"])
     assert result.exit_code == 0
@@ -1011,12 +1024,14 @@ def test_complete_command_dry_run_invalid_numbers(mock_manager):
 def test_complete_command_uses_interesting_tasks(mock_manager):
     """Test that complete command uses the same task list as interesting command."""
     # Mock the methods that both interesting and complete commands use
-    mock_manager.get_inbox_tasks.return_value = [
-        Task(id="1", name="Inbox Task", project="Inbox", flagged=False),
-    ]
-    mock_manager.get_flagged_tasks.return_value = [
-        Task(id="2", name="Flagged Task", project="Work", flagged=True),
-    ]
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [
+            Task(id="1", name="Inbox Task", project="Inbox", flagged=False),
+        ],
+        [
+            Task(id="2", name="Flagged Task", project="Work", flagged=True),
+        ],
+    )
     mock_manager.get_all_tasks.return_value = [
         Task(id="1", name="Inbox Task", project="Inbox", flagged=False),
         Task(id="2", name="Flagged Task", project="Work", flagged=True),
@@ -1030,9 +1045,8 @@ def test_complete_command_uses_interesting_tasks(mock_manager):
     assert "Flagged Task" in result.stdout
     assert "Non-interesting Task" not in result.stdout
 
-    # Verify it called get_inbox_tasks and get_flagged_tasks, not get_all_tasks
-    mock_manager.get_inbox_tasks.assert_called()
-    mock_manager.get_flagged_tasks.assert_called()
+    # Verify it fetched only the interesting tasks, not the full task list
+    mock_manager.get_inbox_and_flagged_tasks_omni.assert_called()
     mock_manager.get_all_tasks.assert_not_called()
 
 
@@ -1040,8 +1054,10 @@ def test_complete_command_uses_interesting_tasks(mock_manager):
 def test_complete_command_empty_task_list(mock_manager):
     """Test complete command when no interesting tasks exist."""
     # Mock empty task lists
-    mock_manager.get_inbox_tasks.return_value = []
-    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [],
+        [],
+    )
 
     result = runner.invoke(app, ["complete"])
     assert result.exit_code == 0
@@ -1113,8 +1129,10 @@ def test_get_interesting_tasks(mock_manager):
         Task(id="3", name="Flagged Task 1", project="Work", flagged=True),
     ]
 
-    mock_manager.get_inbox_tasks.return_value = inbox_tasks
-    mock_manager.get_flagged_tasks.return_value = flagged_tasks
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        inbox_tasks,
+        flagged_tasks,
+    )
 
     # Test deduplication
     with patch("omnifocus.manager", mock_manager):
@@ -1166,8 +1184,10 @@ def test_interesting_command_with_urls(mock_manager):
         ),
     ]
 
-    mock_manager.get_inbox_tasks.return_value = inbox_tasks
-    mock_manager.get_flagged_tasks.return_value = flagged_tasks
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        inbox_tasks,
+        flagged_tasks,
+    )
 
     result = runner.invoke(app, ["interesting"])
     assert result.exit_code == 0
@@ -1206,8 +1226,10 @@ def test_interesting_command_with_urls(mock_manager):
 @patch("omnifocus.manager")
 def test_interesting_command_no_tasks(mock_manager):
     """Test interesting command when no tasks are found."""
-    mock_manager.get_inbox_tasks.return_value = []
-    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [],
+        [],
+    )
 
     result = runner.invoke(app, ["interesting"])
     assert result.exit_code == 0
@@ -1229,8 +1251,10 @@ def test_open_task_command_success(mock_manager, mock_system):
         ),
     ]
 
-    mock_manager.get_inbox_tasks.return_value = inbox_tasks
-    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        inbox_tasks,
+        [],
+    )
 
     result = runner.invoke(app, ["open-task", "1"])
     assert result.exit_code == 0
@@ -1249,8 +1273,10 @@ def test_open_task_command_no_url(mock_manager):
         Task(id="1", name="Regular Task", project="Inbox", flagged=False),
     ]
 
-    mock_manager.get_inbox_tasks.return_value = inbox_tasks
-    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        inbox_tasks,
+        [],
+    )
 
     result = runner.invoke(app, ["open-task", "1"])
     assert result.exit_code == 0
@@ -1265,8 +1291,10 @@ def test_open_task_command_invalid_number(mock_manager):
         Task(id="1", name="Task 1", project="Inbox", flagged=False),
     ]
 
-    mock_manager.get_inbox_tasks.return_value = inbox_tasks
-    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        inbox_tasks,
+        [],
+    )
 
     # Test with number too high
     result = runner.invoke(app, ["open-task", "5"])
@@ -1282,8 +1310,10 @@ def test_open_task_command_invalid_number(mock_manager):
 @patch("omnifocus.manager")
 def test_open_task_command_no_tasks(mock_manager):
     """Test open-task command when no interesting tasks exist."""
-    mock_manager.get_inbox_tasks.return_value = []
-    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [],
+        [],
+    )
 
     result = runner.invoke(app, ["open-task", "1"])
     assert result.exit_code == 0
@@ -1305,8 +1335,10 @@ def test_open_task_command_system_error(mock_manager, mock_system):
         ),
     ]
 
-    mock_manager.get_inbox_tasks.return_value = inbox_tasks
-    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        inbox_tasks,
+        [],
+    )
 
     # Mock system.open_url to raise an exception
     mock_system.open_url.side_effect = Exception("Failed to open URL")
@@ -1330,8 +1362,10 @@ def test_interesting_command_task_ordering(mock_manager):
         Task(id="3", name="Flagged Only", project="Work", flagged=True),
     ]
 
-    mock_manager.get_inbox_tasks.return_value = inbox_tasks
-    mock_manager.get_flagged_tasks.return_value = flagged_tasks
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        inbox_tasks,
+        flagged_tasks,
+    )
 
     result = runner.invoke(app, ["interesting"])
     assert result.exit_code == 0
@@ -1374,8 +1408,10 @@ def test_interesting_command_with_metadata(mock_manager):
         ),
     ]
 
-    mock_manager.get_inbox_tasks.return_value = inbox_tasks
-    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        inbox_tasks,
+        [],
+    )
 
     result = runner.invoke(app, ["interesting"])
     assert result.exit_code == 0
@@ -1443,8 +1479,10 @@ def test_open_task_command_with_url_in_name(mock_manager):
         ),
     ]
 
-    mock_manager.get_inbox_tasks.return_value = inbox_tasks
-    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        inbox_tasks,
+        [],
+    )
 
     with patch("omnifocus.system") as mock_system:
         result = runner.invoke(app, ["open-task", "1"])
@@ -1470,8 +1508,10 @@ def test_interesting_command_mixed_url_sources(mock_manager):
         ),
     ]
 
-    mock_manager.get_inbox_tasks.return_value = inbox_tasks
-    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        inbox_tasks,
+        [],
+    )
 
     result = runner.invoke(app, ["interesting"])
     assert result.exit_code == 0
@@ -1503,8 +1543,10 @@ def test_open_task_command_prefers_note_url_over_name_url(mock_manager):
         ),
     ]
 
-    mock_manager.get_inbox_tasks.return_value = inbox_tasks
-    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        inbox_tasks,
+        [],
+    )
 
     with patch("omnifocus.system") as mock_system:
         result = runner.invoke(app, ["open-task", "1"])
@@ -1518,8 +1560,10 @@ def test_open_task_command_prefers_note_url_over_name_url(mock_manager):
 @patch("omnifocus.manager")
 def test_interesting_command_empty_inbox_and_flagged(mock_manager):
     """Test interesting command when both inbox and flagged are empty."""
-    mock_manager.get_inbox_tasks.return_value = []
-    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [],
+        [],
+    )
 
     result = runner.invoke(app, ["interesting"])
     assert result.exit_code == 0
@@ -1546,8 +1590,10 @@ def test_flagged_command_consistent_numbering(mock_manager):
         Task(id="4", name="Flagged Only", project="Work", flagged=True),
     ]
 
-    mock_manager.get_inbox_tasks.return_value = inbox_tasks
-    mock_manager.get_flagged_tasks.return_value = flagged_tasks
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        inbox_tasks,
+        flagged_tasks,
+    )
 
     result = runner.invoke(app, ["flagged"])
     assert result.exit_code == 0
@@ -1586,8 +1632,10 @@ def test_flagged_command_with_web_icons(mock_manager):
         ),
     ]
 
-    mock_manager.get_inbox_tasks.return_value = []
-    mock_manager.get_flagged_tasks.return_value = flagged_tasks
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [],
+        flagged_tasks,
+    )
 
     result = runner.invoke(app, ["flagged"])
     assert result.exit_code == 0
@@ -1609,8 +1657,10 @@ def test_flagged_command_no_flagged_tasks(mock_manager):
         Task(id="1", name="Inbox Task", project="Inbox", flagged=False),
     ]
 
-    mock_manager.get_inbox_tasks.return_value = inbox_tasks
-    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        inbox_tasks,
+        [],
+    )
 
     result = runner.invoke(app, ["flagged"])
     assert result.exit_code == 0
@@ -1632,8 +1682,10 @@ def test_flagged_command_table_format(mock_manager):
         ),
     ]
 
-    mock_manager.get_inbox_tasks.return_value = []
-    mock_manager.get_flagged_tasks.return_value = flagged_tasks
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [],
+        flagged_tasks,
+    )
 
     result = runner.invoke(app, ["flagged"])
     assert result.exit_code == 0
@@ -1694,13 +1746,15 @@ def test_start_flow_session_with_special_characters(manager, mock_system):
 def test_flow_command_success(mock_manager, mock_system, mock_interactive_edit):
     """Test flow command with successful execution."""
     # Mock the methods that flow command uses
-    mock_manager.get_inbox_tasks.return_value = [
-        Task(id="1", name="Task 1", project="Inbox", flagged=False),
-    ]
-    mock_manager.get_flagged_tasks.return_value = [
-        Task(id="2", name="Task 2", project="Work", flagged=True),
-        Task(id="3", name="Flow Session Task", project="Personal", flagged=True),
-    ]
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [
+            Task(id="1", name="Task 1", project="Inbox", flagged=False),
+        ],
+        [
+            Task(id="2", name="Task 2", project="Work", flagged=True),
+            Task(id="3", name="Flow Session Task", project="Personal", flagged=True),
+        ],
+    )
 
     # Mock interactive editing to return the original name
     mock_interactive_edit.return_value = "Flow Session Task"
@@ -1723,12 +1777,14 @@ def test_flow_command_success(mock_manager, mock_system, mock_interactive_edit):
 def test_flow_command_invalid_task_number(mock_manager):
     """Test flow command with invalid task number."""
     # Mock the methods that flow command uses
-    mock_manager.get_inbox_tasks.return_value = [
-        Task(id="1", name="Task 1", project="Inbox", flagged=False),
-    ]
-    mock_manager.get_flagged_tasks.return_value = [
-        Task(id="2", name="Task 2", project="Work", flagged=True),
-    ]
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [
+            Task(id="1", name="Task 1", project="Inbox", flagged=False),
+        ],
+        [
+            Task(id="2", name="Task 2", project="Work", flagged=True),
+        ],
+    )
 
     result = runner.invoke(app, ["flow", "5", "--no-shorten"])
     assert result.exit_code == 0
@@ -1742,8 +1798,10 @@ def test_flow_command_invalid_task_number(mock_manager):
 def test_flow_command_no_tasks(mock_manager):
     """Test flow command when no tasks are available."""
     # Mock empty task lists
-    mock_manager.get_inbox_tasks.return_value = []
-    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [],
+        [],
+    )
 
     result = runner.invoke(app, ["flow", "1", "--no-shorten"])
     assert result.exit_code == 0
@@ -1761,10 +1819,12 @@ def test_flow_command_subprocess_error(
 ):
     """Test flow command when subprocess fails."""
     # Mock the methods that flow command uses
-    mock_manager.get_inbox_tasks.return_value = [
-        Task(id="1", name="Task 1", project="Inbox", flagged=False),
-    ]
-    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [
+            Task(id="1", name="Task 1", project="Inbox", flagged=False),
+        ],
+        [],
+    )
 
     # Mock interactive editing to return the original name
     mock_interactive_edit.return_value = "Task 1"
@@ -1792,10 +1852,12 @@ def test_flow_command_file_not_found_error(
 ):
     """Test flow command when 'y' command is not found."""
     # Mock the methods that flow command uses
-    mock_manager.get_inbox_tasks.return_value = [
-        Task(id="1", name="Task 1", project="Inbox", flagged=False),
-    ]
-    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [
+            Task(id="1", name="Task 1", project="Inbox", flagged=False),
+        ],
+        [],
+    )
 
     # Mock interactive editing to return the original name
     mock_interactive_edit.return_value = "Task 1"
@@ -1819,12 +1881,14 @@ def test_flow_command_uses_interesting_tasks(
 ):
     """Test that flow command uses the same task list as interesting command."""
     # Mock the methods that both commands use
-    mock_manager.get_inbox_tasks.return_value = [
-        Task(id="1", name="Inbox Task", project="Inbox", flagged=False),
-    ]
-    mock_manager.get_flagged_tasks.return_value = [
-        Task(id="2", name="Flagged Task", project="Work", flagged=True),
-    ]
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [
+            Task(id="1", name="Inbox Task", project="Inbox", flagged=False),
+        ],
+        [
+            Task(id="2", name="Flagged Task", project="Work", flagged=True),
+        ],
+    )
 
     # Mock interactive editing to return the original name
     mock_interactive_edit.return_value = "Flagged Task"
@@ -1837,8 +1901,7 @@ def test_flow_command_uses_interesting_tasks(
     assert "Started flow session: Flagged Task" in result.stdout
 
     # Verify both inbox and flagged tasks were fetched (same as interesting command)
-    mock_manager.get_inbox_tasks.assert_called_once()
-    mock_manager.get_flagged_tasks.assert_called_once()
+    mock_manager.get_inbox_and_flagged_tasks_omni.assert_called_once()
     mock_system.run_flow_command.assert_called_once_with("flow-go", "Flagged Task")
 
 
@@ -1859,9 +1922,12 @@ def test_osx_system_run_flow_command():
         # Verify the result
         assert result == "Flow command output"
 
-        # Verify subprocess.run was called correctly with shell=True and proper escaping
+        # Verify subprocess.run was called correctly with shell=True and proper escaping.
+        # Derive the y path the same way run_flow_command does, so this test is not
+        # tied to the home directory of whoever runs it.
+        y_path = str(Path.home() / ".local" / "bin" / "y")
         mock_run.assert_called_once_with(
-            "y flow-rename 'Test Session'",
+            f"{y_path} flow-rename 'Test Session'",
             shell=True,
             capture_output=True,
             text=True,
@@ -1887,8 +1953,9 @@ def test_osx_system_run_flow_command_no_args():
         assert result == "Flow started"
 
         # Verify subprocess.run was called correctly with shell=True
+        y_path = str(Path.home() / ".local" / "bin" / "y")
         mock_run.assert_called_once_with(
-            "y flow-go", shell=True, capture_output=True, text=True, check=True
+            f"{y_path} flow-go", shell=True, capture_output=True, text=True, check=True
         )
 
 
@@ -1943,7 +2010,8 @@ def test_osx_system_run_flow_command_special_characters():
             assert result == "Flow command output"
 
             # Verify subprocess.run was called with properly escaped arguments
-            expected_cmd = f"y flow-rename {shlex.quote(session_name)}"
+            y_path = str(Path.home() / ".local" / "bin" / "y")
+            expected_cmd = f"{y_path} flow-rename {shlex.quote(session_name)}"
             mock_run.assert_called_once_with(
                 expected_cmd,
                 shell=True,
@@ -1956,89 +2024,190 @@ def test_osx_system_run_flow_command_special_characters():
 # Tests for new LLM functionality
 
 
-def test_llm_task_shortener_success():
-    """Test LLMTaskShortener with successful LLM call."""
-    from unittest.mock import patch, MagicMock
+_NO_CONTENT = object()
+
+
+def _groq_response(
+    content=_NO_CONTENT, status_code: int = 200, finish_reason: str = "stop"
+):
+    """Build a mock Groq chat-completions response.
+
+    Passing no content omits the "content" key entirely, which is how Groq
+    represents a response whose reasoning trace produced no answer.
+    """
+    message = {} if content is _NO_CONTENT else {"content": content}
+    response = MagicMock()
+    response.status_code = status_code
+    response.json.return_value = {
+        "choices": [{"message": message, "finish_reason": finish_reason}]
+    }
+    return response
+
+
+def _shortener(model: str | None = None):
+    """Build an LLMTaskShortener without touching the environment or disk.
+
+    LLMTaskShortener.__init__ reads $GROQ_API_KEY and falls back to reading the
+    developer's real secretBox.json, so the key lookup is patched out to keep
+    unit tests hermetic.
+    """
     from omnifocus import LLMTaskShortener
 
-    with patch("subprocess.run") as mock_run:
-        # Setup mock for successful llm command
-        mock_result = MagicMock()
-        mock_result.stdout = "Fix flow names\n"
-        mock_result.returncode = 0
-        mock_run.return_value = mock_result
+    with patch.object(LLMTaskShortener, "_get_api_key", return_value="test-key"):
+        return LLMTaskShortener(model) if model else LLMTaskShortener()
 
-        # Create shortener and test
-        shortener = LLMTaskShortener()
+
+def test_llm_task_shortener_default_model_is_current():
+    """Pin the default model string so a revert to a decommissioned one fails.
+
+    Asserting payload["model"] == shortener.model would be a tautology; the
+    literal is what actually guards against restoring a 404-ing default.
+    """
+    assert _shortener().model == "openai/gpt-oss-120b"
+
+
+def test_llm_task_shortener_success():
+    """Test LLMTaskShortener with a successful Groq API call."""
+    with patch("requests.post") as mock_post:
+        mock_post.return_value = _groq_response("Fix flow names\n")
+
+        shortener = _shortener()
         result = shortener.shorten_task_name("Use llm to fix up flow names")
 
-        # Verify result
         assert result == "Fix flow names"
 
-        # Verify subprocess.run was called correctly
-        expected_prompt = """You are a productivity assistant helping to create concise flow session names from OmniFocus task descriptions.
-
-Task: "Use llm to fix up flow names"
-
-Create a short, focused session name (2-6 words) that captures the essential action and context. Follow these guidelines:
-
-1. Remove project prefixes, dates, and administrative details
-2. Focus on the core action or deliverable
-3. Keep technical terms if they're essential
-4. Use active, engaging language
-5. Aim for 2-6 words maximum
-
-Examples:
-- "Review Q4 budget spreadsheet for finance team meeting" → "Review Q4 Budget"
-- "Call client about project timeline and deliverables" → "Client Timeline Call"
-- "Write blog post about productivity techniques" → "Write Productivity Post"
-- "https://example.com/article - Read and summarize" → "Read Article Summary"
-
-Return only the shortened name, no explanation."""
-
-        mock_run.assert_called_once_with(
-            ["llm", "-m", "gpt-4o-mini", expected_prompt],
-            capture_output=True,
-            text=True,
-            timeout=10.0,
-            check=True,
+        # Verify the request targeted Groq's chat-completions endpoint with the
+        # configured model and the task name in the user message.
+        mock_post.assert_called_once()
+        url = mock_post.call_args[0][0]
+        payload = mock_post.call_args.kwargs["json"]
+        assert url == "https://api.groq.com/openai/v1/chat/completions"
+        assert payload["model"] == "openai/gpt-oss-120b"
+        assert (
+            'Task: "Use llm to fix up flow names"' in payload["messages"][1]["content"]
+        )
+        assert (
+            mock_post.call_args.kwargs["headers"]["Authorization"] == "Bearer test-key"
         )
 
+        # A missing timeout lets a stalled connection hang the CLI indefinitely.
+        assert mock_post.call_args.kwargs["timeout"] > 0
 
-def test_llm_task_shortener_failure():
-    """Test LLMTaskShortener when LLM command fails."""
-    from unittest.mock import patch
-    from omnifocus import LLMTaskShortener
-    import subprocess
+        # GPT-OSS models are reasoning models that spend part of the token
+        # budget on a hidden reasoning trace. Too small a budget returns an
+        # empty or truncated name, so guard the settings that make it reliable.
+        assert payload["max_tokens"] >= 512
+        assert payload["reasoning_effort"] == "low"
 
-    with patch("subprocess.run") as mock_run:
-        # Setup mock to raise CalledProcessError
-        mock_run.side_effect = subprocess.CalledProcessError(
-            1, ["llm"], "LLM command failed"
-        )
 
-        # Create shortener and test
-        shortener = LLMTaskShortener()
+def test_llm_task_shortener_omits_reasoning_effort_for_other_models():
+    """Test reasoning_effort is only sent to models that accept it.
+
+    Groq rejects the parameter with HTTP 400 on non-reasoning models
+    ("`reasoning_effort` is not supported with this model"), so sending it
+    unconditionally would break every swap to a non-GPT-OSS model.
+    """
+    with patch("requests.post") as mock_post:
+        mock_post.return_value = _groq_response("Fix flow names")
+
+        shortener = _shortener("llama-3.3-70b-versatile")
+        shortener.shorten_task_name("Use llm to fix up flow names")
+
+        payload = mock_post.call_args.kwargs["json"]
+        assert "reasoning_effort" not in payload
+        assert payload["model"] == "llama-3.3-70b-versatile"
+
+
+def test_llm_task_shortener_missing_content_key(capsys):
+    """Test LLMTaskShortener reads a missing content key defensively.
+
+    Subscripting the message instead would raise KeyError, which the broad
+    `except Exception` swallows into the same return value — so asserting the
+    fallback alone cannot tell the two apart. The exception path prints
+    "Groq API failed", so its absence is what proves the read was defensive.
+    """
+    with patch("requests.post") as mock_post:
+        mock_post.return_value = _groq_response()  # message == {}
+
+        result = _shortener().shorten_task_name("Original task name")
+
+        assert result == "Original task name"
+        assert "Groq API failed" not in capsys.readouterr().out
+
+
+def test_llm_task_shortener_truncated_response():
+    """Test LLMTaskShortener falls back when the model response was truncated.
+
+    A finish_reason of "length" means the reasoning trace exhausted the token
+    budget and the name may be cut mid-word, so the original must be kept.
+    """
+    with patch("requests.post") as mock_post:
+        mock_post.return_value = _groq_response("Write Produc", finish_reason="length")
+
+        shortener = _shortener()
+        result = shortener.shorten_task_name("Write blog post about productivity")
+
+        assert result == "Write blog post about productivity"
+
+
+def test_llm_task_shortener_empty_content():
+    """Test LLMTaskShortener falls back when the model returns empty content."""
+    with patch("requests.post") as mock_post:
+        mock_post.return_value = _groq_response("")
+
+        shortener = _shortener()
         result = shortener.shorten_task_name("Original task name")
 
-        # Should return original name on failure
         assert result == "Original task name"
 
 
-def test_llm_task_shortener_file_not_found():
-    """Test LLMTaskShortener when llm command is not found."""
-    from unittest.mock import patch
-    from omnifocus import LLMTaskShortener
+def test_llm_task_shortener_api_error():
+    """Test LLMTaskShortener falls back to the original name on a non-200 response.
 
-    with patch("subprocess.run") as mock_run:
-        # Setup mock to raise FileNotFoundError
-        mock_run.side_effect = FileNotFoundError("llm command not found")
+    This is the regression guard for a decommissioned model: Groq returns 404
+    and the CLI must degrade gracefully rather than lose the task name.
+    """
+    with patch("requests.post") as mock_post:
+        mock_post.return_value = _groq_response("", status_code=404)
 
-        # Create shortener and test
-        shortener = LLMTaskShortener()
+        shortener = _shortener()
         result = shortener.shorten_task_name("Original task name")
 
-        # Should return original name on failure
+        assert result == "Original task name"
+
+
+def test_llm_task_shortener_request_exception():
+    """Test LLMTaskShortener falls back when the HTTP call raises."""
+    with patch("requests.post") as mock_post:
+        mock_post.side_effect = RuntimeError("connection reset")
+
+        shortener = _shortener()
+        result = shortener.shorten_task_name("Original task name")
+
+        assert result == "Original task name"
+
+
+def test_llm_task_shortener_no_api_key():
+    """Test LLMTaskShortener skips shortening (and makes no request) without a key."""
+    from omnifocus import LLMTaskShortener
+
+    with patch("requests.post") as mock_post:
+        with patch.object(LLMTaskShortener, "_get_api_key", return_value=None):
+            shortener = LLMTaskShortener()
+        result = shortener.shorten_task_name("Original task name")
+
+        assert result == "Original task name"
+        mock_post.assert_not_called()
+
+
+def test_llm_task_shortener_rejects_overlong_response():
+    """Test LLMTaskShortener falls back when the model returns an overlong name."""
+    with patch("requests.post") as mock_post:
+        mock_post.return_value = _groq_response("x" * 51)
+
+        shortener = _shortener()
+        result = shortener.shorten_task_name("Original task name")
+
         assert result == "Original task name"
 
 
@@ -2101,10 +2270,17 @@ def test_flow_command_with_llm_shortening(
 ):
     """Test flow command with LLM shortening enabled."""
     # Mock the methods that flow command uses
-    mock_manager.get_inbox_tasks.return_value = []
-    mock_manager.get_flagged_tasks.return_value = [
-        Task(id="1", name="Use llm to fix up flow names", project="Work", flagged=True),
-    ]
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [],
+        [
+            Task(
+                id="1",
+                name="Use llm to fix up flow names",
+                project="Work",
+                flagged=True,
+            ),
+        ],
+    )
 
     # Mock LLM shortener
     mock_shortener = MagicMock()
@@ -2144,10 +2320,12 @@ def test_flow_command_llm_failure_fallback(
 ):
     """Test flow command when LLM shortening fails."""
     # Mock the methods that flow command uses
-    mock_manager.get_inbox_tasks.return_value = []
-    mock_manager.get_flagged_tasks.return_value = [
-        Task(id="1", name="Original Task Name", project="Work", flagged=True),
-    ]
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [],
+        [
+            Task(id="1", name="Original Task Name", project="Work", flagged=True),
+        ],
+    )
 
     # Mock LLM shortener to raise exception
     mock_shortener = MagicMock()
@@ -2186,10 +2364,12 @@ def test_flow_command_user_cancels_editing(
 ):
     """Test flow command when user cancels interactive editing."""
     # Mock the methods that flow command uses
-    mock_manager.get_inbox_tasks.return_value = []
-    mock_manager.get_flagged_tasks.return_value = [
-        Task(id="1", name="Task Name", project="Work", flagged=True),
-    ]
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [],
+        [
+            Task(id="1", name="Task Name", project="Work", flagged=True),
+        ],
+    )
 
     # Mock interactive editing to return None (cancelled)
     mock_interactive_edit.return_value = None
@@ -2214,10 +2394,12 @@ def test_flow_command_dry_run_with_llm(
 ):
     """Test flow command dry run mode with new functionality."""
     # Mock the methods that flow command uses
-    mock_manager.get_inbox_tasks.return_value = []
-    mock_manager.get_flagged_tasks.return_value = [
-        Task(id="1", name="Task Name", project="Work", flagged=True),
-    ]
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [],
+        [
+            Task(id="1", name="Task Name", project="Work", flagged=True),
+        ],
+    )
 
     # Mock interactive editing to return edited name
     mock_interactive_edit.return_value = "Edited Name"
@@ -2257,8 +2439,10 @@ def test_get_tasks_for_completion_no_tasks(mock_manager):
     """Test _get_tasks_for_completion when no tasks exist."""
     from omnifocus import _get_tasks_for_completion
 
-    mock_manager.get_inbox_tasks.return_value = []
-    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [],
+        [],
+    )
 
     with patch("omnifocus.typer.echo") as mock_echo:
         result = _get_tasks_for_completion("1 2")
@@ -2271,10 +2455,12 @@ def test_get_tasks_for_completion_invalid_numbers(mock_manager):
     """Test _get_tasks_for_completion with invalid task numbers."""
     from omnifocus import _get_tasks_for_completion, Task
 
-    mock_manager.get_inbox_tasks.return_value = [
-        Task(id="1", name="Task 1", project="Inbox", flagged=False),
-    ]
-    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [
+            Task(id="1", name="Task 1", project="Inbox", flagged=False),
+        ],
+        [],
+    )
 
     with patch("omnifocus.typer.echo") as mock_echo:
         result = _get_tasks_for_completion("1 5")
@@ -2292,8 +2478,10 @@ def test_get_tasks_for_completion_success(mock_manager):
     task1 = Task(id="1", name="Task 1", project="Inbox", flagged=False)
     task2 = Task(id="2", name="Task 2", project="Work", flagged=True)
 
-    mock_manager.get_inbox_tasks.return_value = [task1]
-    mock_manager.get_flagged_tasks.return_value = [task2]
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [task1],
+        [task2],
+    )
 
     result = _get_tasks_for_completion("1 2")
     assert result is not None
@@ -2305,11 +2493,13 @@ def test_get_tasks_for_completion_success(mock_manager):
 @patch("omnifocus.manager")
 def test_complete_command_no_confirm_flag(mock_manager):
     """Test complete command with --no-confirm flag skips confirmation."""
-    mock_manager.get_inbox_tasks.return_value = [
-        Task(id="1", name="Task 1", project="Inbox", flagged=False),
-        Task(id="2", name="Task 2", project="Inbox", flagged=False),
-    ]
-    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [
+            Task(id="1", name="Task 1", project="Inbox", flagged=False),
+            Task(id="2", name="Task 2", project="Inbox", flagged=False),
+        ],
+        [],
+    )
     mock_manager.complete.return_value = "Task completed successfully"
 
     result = runner.invoke(app, ["complete", "1", "2", "--no-confirm"])
@@ -2326,11 +2516,13 @@ def test_complete_command_no_confirm_flag(mock_manager):
 @patch("omnifocus.typer.confirm")
 def test_complete_command_with_confirmation_accept(mock_confirm, mock_manager):
     """Test complete command with confirmation prompts - user accepts."""
-    mock_manager.get_inbox_tasks.return_value = [
-        Task(id="1", name="Task 1", project="Inbox", flagged=False),
-        Task(id="2", name="Task 2", project="Inbox", flagged=False),
-    ]
-    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [
+            Task(id="1", name="Task 1", project="Inbox", flagged=False),
+            Task(id="2", name="Task 2", project="Inbox", flagged=False),
+        ],
+        [],
+    )
     mock_manager.complete.return_value = "Task completed successfully"
     mock_confirm.return_value = True  # User accepts all confirmations
 
@@ -2348,11 +2540,13 @@ def test_complete_command_with_confirmation_accept(mock_confirm, mock_manager):
 @patch("omnifocus.typer.confirm")
 def test_complete_command_with_confirmation_reject(mock_confirm, mock_manager):
     """Test complete command with confirmation prompts - user rejects some."""
-    mock_manager.get_inbox_tasks.return_value = [
-        Task(id="1", name="Task 1", project="Inbox", flagged=False),
-        Task(id="2", name="Task 2", project="Inbox", flagged=False),
-    ]
-    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [
+            Task(id="1", name="Task 1", project="Inbox", flagged=False),
+            Task(id="2", name="Task 2", project="Inbox", flagged=False),
+        ],
+        [],
+    )
     mock_manager.complete.return_value = "Task completed successfully"
     mock_confirm.side_effect = [True, False]  # Accept first, reject second
 
@@ -2370,11 +2564,13 @@ def test_complete_command_with_confirmation_reject(mock_confirm, mock_manager):
 @patch("omnifocus.typer.confirm")
 def test_complete_command_confirmation_keyboard_interrupt(mock_confirm, mock_manager):
     """Test complete command when user cancels with Ctrl+C during confirmation."""
-    mock_manager.get_inbox_tasks.return_value = [
-        Task(id="1", name="Task 1", project="Inbox", flagged=False),
-        Task(id="2", name="Task 2", project="Inbox", flagged=False),
-    ]
-    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [
+            Task(id="1", name="Task 1", project="Inbox", flagged=False),
+            Task(id="2", name="Task 2", project="Inbox", flagged=False),
+        ],
+        [],
+    )
     mock_confirm.side_effect = KeyboardInterrupt()
 
     result = runner.invoke(app, ["complete", "1", "2"])
@@ -2388,10 +2584,12 @@ def test_complete_command_confirmation_keyboard_interrupt(mock_confirm, mock_man
 @patch("omnifocus.manager")
 def test_complete_command_single_task_no_confirmation(mock_manager):
     """Test that single task completion never requires confirmation."""
-    mock_manager.get_inbox_tasks.return_value = [
-        Task(id="1", name="Task 1", project="Inbox", flagged=False),
-    ]
-    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [
+            Task(id="1", name="Task 1", project="Inbox", flagged=False),
+        ],
+        [],
+    )
     mock_manager.complete.return_value = "Task completed successfully"
 
     with patch("omnifocus.typer.confirm") as mock_confirm:
@@ -2413,8 +2611,10 @@ def test_complete_command_task_number_stability(mock_manager):
     task2 = Task(id="2", name="Task 2", project="Work", flagged=True)
     task3 = Task(id="3", name="Task 3", project="Personal", flagged=True)
 
-    mock_manager.get_inbox_tasks.return_value = [task1]
-    mock_manager.get_flagged_tasks.return_value = [task2, task3]
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [task1],
+        [task2, task3],
+    )
     mock_manager.complete.return_value = "Task completed successfully"
 
     result = runner.invoke(app, ["complete", "1", "3", "2", "--no-confirm"])
@@ -2451,8 +2651,10 @@ def test_complete_command_confirmation_shows_task_details(mock_manager):
         ),
     ]
 
-    mock_manager.get_inbox_tasks.return_value = []
-    mock_manager.get_flagged_tasks.return_value = tasks
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [],
+        tasks,
+    )
     mock_manager.complete.return_value = "Task completed"
 
     with patch("omnifocus.typer.confirm", return_value=True) as mock_confirm:
@@ -2675,8 +2877,10 @@ def test_snooze_command_success(mock_manager, mock_parse_time):
         id="snooze123",
     )
 
-    mock_manager.get_inbox_tasks.return_value = []
-    mock_manager.get_flagged_tasks.return_value = [task]
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [],
+        [task],
+    )
     mock_manager.snooze_task.return_value = True
 
     # Test snooze command
@@ -2715,8 +2919,10 @@ def test_snooze_command_dry_run(mock_manager, mock_parse_time):
         id="dry123",
     )
 
-    mock_manager.get_inbox_tasks.return_value = [task]
-    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [task],
+        [],
+    )
 
     # Test dry run
     result = runner.invoke(app, ["snooze", "1", "month", "--dry-run"])
@@ -2761,8 +2967,10 @@ def test_snooze_command_invalid_task_number(mock_manager, mock_parse_time):
     mock_parse_time.return_value = datetime(2025, 6, 20, 0, 0, 0)
 
     # Mock empty task list
-    mock_manager.get_inbox_tasks.return_value = []
-    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [],
+        [],
+    )
 
     # Test with invalid task number
     result = runner.invoke(app, ["snooze", "99", "day"])
@@ -2791,8 +2999,10 @@ def test_snooze_command_snooze_failure(mock_manager, mock_parse_time):
         id="fail123",
     )
 
-    mock_manager.get_inbox_tasks.return_value = [task]
-    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [task],
+        [],
+    )
     mock_manager.snooze_task.return_value = False  # Simulate failure
 
     # Test snooze command
@@ -2822,8 +3032,10 @@ def test_snooze_command_non_flagged_non_inbox_task(mock_manager, mock_parse_time
         id="regular123",
     )
 
-    mock_manager.get_inbox_tasks.return_value = [task]
-    mock_manager.get_flagged_tasks.return_value = []
+    mock_manager.get_inbox_and_flagged_tasks_omni.return_value = (
+        [task],
+        [],
+    )
     mock_manager.snooze_task.return_value = True
 
     # Test snooze command

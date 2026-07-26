@@ -36,7 +36,6 @@ from rich.table import Table
 from rich.text import Text
 from rich import box
 import shlex
-from concurrent.futures import ThreadPoolExecutor
 import os
 from pathlib import Path
 
@@ -76,7 +75,7 @@ def log_timing(operation: str, duration: float, details: str = "") -> None:
 
         with open(TIMING_LOG_FILE, "a") as f:
             f.write(log_line)
-    except Exception as e:
+    except Exception:
         # Silently fail if logging doesn't work - don't break the main functionality
         pass
 
@@ -208,7 +207,7 @@ class OSXSystem:
         start_time = time.perf_counter()
         # Escape the script for AppleScript string literal
         # Keep newlines for proper JavaScript parsing
-        escaped = script.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
+        escaped = script.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
         applescript = f'tell application "OmniFocus" to evaluate javascript "{escaped}"'
         result = subprocess.run(
             ["osascript", "-e", applescript],
@@ -270,14 +269,30 @@ class OSXSystem:
 class LLMTaskShortener:
     """Humble object for LLM-powered task name shortening using Groq API."""
 
-    def __init__(self, model: str = "meta-llama/llama-4-maverick-17b-128e-instruct"):
+    # Only the GPT-OSS family accepts `reasoning_effort: "low"`. Verified
+    # against the live Groq API: llama-3.x rejects the parameter outright with
+    # HTTP 400 ("`reasoning_effort` is not supported with this model") and
+    # Qwen3 accepts only "none"/"default". The parameter must therefore be
+    # gated on the model, so that swapping in a non-reasoning model (which the
+    # docstring below tells maintainers to do) does not trade a 404 for a 400.
+    REASONING_EFFORT_MODEL_PREFIXES = ("openai/gpt-oss",)
+
+    def __init__(self, model: str = "openai/gpt-oss-120b"):
         """Initialize the LLM task shortener.
 
         Args:
-            model: Model to use with Groq API (defaults to Llama 4 Maverick)
+            model: Model to use with Groq API. Defaults to GPT-OSS 120B. Groq
+                decommissions models periodically; a 404 from the API means
+                this default needs updating against
+                https://console.groq.com/docs/deprecations
         """
         self.model = model
         self.api_key = self._get_api_key()
+
+    @property
+    def supports_reasoning_effort(self) -> bool:
+        """Whether the configured model accepts a `reasoning_effort` value."""
+        return self.model.startswith(self.REASONING_EFFORT_MODEL_PREFIXES)
 
     def _get_api_key(self) -> str | None:
         """Get Groq API key from environment or secretBox.json."""
@@ -310,7 +325,9 @@ class LLMTaskShortener:
         start_time = time.perf_counter()
 
         if not self.api_key:
-            console.print("[warning]GROQ_API_KEY not found. Skipping task shortening.[/]")
+            console.print(
+                "[warning]GROQ_API_KEY not found. Skipping task shortening.[/]"
+            )
             return task_name
 
         try:
@@ -339,15 +356,24 @@ Return only the shortened name, no explanation."""
                 "Content-Type": "application/json",
             }
 
+            # GPT-OSS models are reasoning models: they emit a hidden reasoning
+            # trace before the answer, and both share the max_tokens budget. At
+            # max_tokens=100 the trace consumed the whole budget and the answer
+            # came back empty or truncated (finish_reason="length"). A larger
+            # budget plus low reasoning effort makes the call both reliable and
+            # faster, since fewer tokens are generated overall.
             payload = {
                 "model": self.model,
                 "messages": [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": f'Task: "{task_name}"'},
                 ],
-                "max_tokens": 100,
+                "max_tokens": 512,
                 "temperature": 0.3,
             }
+
+            if self.supports_reasoning_effort:
+                payload["reasoning_effort"] = "low"
 
             response = requests.post(
                 "https://api.groq.com/openai/v1/chat/completions",
@@ -358,7 +384,11 @@ Return only the shortened name, no explanation."""
 
             if response.status_code != 200:
                 duration = time.perf_counter() - start_time
-                log_timing("llm_shorten_task", duration, f"model={self.model}, success=False, reason=api_error")
+                log_timing(
+                    "llm_shorten_task",
+                    duration,
+                    f"model={self.model}, success=False, reason=api_error",
+                )
                 console.print(f"[warning]Groq API error: {response.status_code}[/]")
                 return task_name
 
@@ -366,25 +396,56 @@ Return only the shortened name, no explanation."""
 
             if "choices" not in response_data or not response_data["choices"]:
                 duration = time.perf_counter() - start_time
-                log_timing("llm_shorten_task", duration, f"model={self.model}, success=False, reason=no_response")
+                log_timing(
+                    "llm_shorten_task",
+                    duration,
+                    f"model={self.model}, success=False, reason=no_response",
+                )
                 return task_name
 
-            shortened_name = response_data["choices"][0]["message"]["content"].strip()
+            choice = response_data["choices"][0]
+
+            # A truncated response ("length") can cut the name mid-word, so
+            # treat it as a failure rather than returning a partial name.
+            if choice.get("finish_reason") == "length":
+                duration = time.perf_counter() - start_time
+                log_timing(
+                    "llm_shorten_task",
+                    duration,
+                    f"model={self.model}, success=False, reason=truncated",
+                )
+                console.print(
+                    "[warning]LLM response truncated (max_tokens reached). "
+                    "Keeping original task name.[/]"
+                )
+                return task_name
+
+            shortened_name = (choice["message"].get("content") or "").strip()
 
             # Validate the response isn't empty and isn't too long
             if shortened_name and len(shortened_name) <= 50:
                 duration = time.perf_counter() - start_time
-                log_timing("llm_shorten_task", duration, f"model={self.model}, success=True")
+                log_timing(
+                    "llm_shorten_task", duration, f"model={self.model}, success=True"
+                )
                 return shortened_name
             else:
                 duration = time.perf_counter() - start_time
-                log_timing("llm_shorten_task", duration, f"model={self.model}, success=False, reason=invalid_response")
+                log_timing(
+                    "llm_shorten_task",
+                    duration,
+                    f"model={self.model}, success=False, reason=invalid_response",
+                )
                 return task_name
 
         except Exception as e:
             # Fallback to original name if API call fails
             duration = time.perf_counter() - start_time
-            log_timing("llm_shorten_task", duration, f"model={self.model}, success=False, reason=exception")
+            log_timing(
+                "llm_shorten_task",
+                duration,
+                f"model={self.model}, success=False, reason=exception",
+            )
             console.print(f"[warning]Groq API failed: {e}[/]")
             return task_name
 
@@ -2045,7 +2106,9 @@ def ainteresting():
             "uid": task.id or f"task-{i}",
             "title": title,
             "subtitle": subtitle,
-            "arg": url if url else f"flow:{task.id}",  # URL to open, or flow command with task ID
+            "arg": url
+            if url
+            else f"flow:{task.id}",  # URL to open, or flow command with task ID
             "autocomplete": task.name,
             "valid": True,
             "match": task.name,  # Allow Alfred to match on task name
@@ -2299,9 +2362,7 @@ def complete(
 
     # Auto-detect fzf mode: use if no task nums, interactive TTY, and not disabled
     use_fzf = (
-        not task_nums
-        and not no_fzf
-        and os.isatty(0)  # stdin is a TTY (interactive)
+        not task_nums and not no_fzf and os.isatty(0)  # stdin is a TTY (interactive)
     )
 
     # Handle fzf mode
@@ -2561,9 +2622,7 @@ def open_task(
 
     # Auto-detect fzf mode: use if no task num, interactive TTY, and not disabled
     use_fzf = (
-        task_num is None
-        and not no_fzf
-        and os.isatty(0)  # stdin is a TTY (interactive)
+        task_num is None and not no_fzf and os.isatty(0)  # stdin is a TTY (interactive)
     )
 
     # Handle fzf mode
@@ -2639,9 +2698,7 @@ def flow(
 
     # Auto-detect fzf mode: use if no task num, interactive TTY, and not disabled
     use_fzf = (
-        task_num is None
-        and not no_fzf
-        and os.isatty(0)  # stdin is a TTY (interactive)
+        task_num is None and not no_fzf and os.isatty(0)  # stdin is a TTY (interactive)
     )
 
     # Handle fzf mode
