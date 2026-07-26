@@ -76,17 +76,24 @@ External Systems (OmniFocus, macOS, Web)
 
 The codebase uses two different approaches to interact with OmniFocus:
 
-1. **JavaScript Automation (JXA)** - Primary method for reading data
+1. **JavaScript Automation (JXA)** - Used for the broad task listings
+
    - Via `OSXSystem.run_javascript()` which calls `osascript -l JavaScript`
    - Used by: `get_all_tasks()`, `get_flagged_tasks()`, `get_inbox_tasks()`
    - Returns JSON data parsed into Task models
 
 2. **Omni Automation (OmniJS)** - Faster alternative for reading (10-100x faster)
+
    - Via `OSXSystem.run_omni_automation()` which runs scripts directly in OmniFocus context
-   - Used by: `get_inbox_and_flagged_tasks_omni()`
+   - Used by: `get_inbox_and_flagged_tasks_omni()` (backs `_get_interesting_tasks()`,
+     and so every command that numbers tasks: `interesting`, `flagged`, `complete`,
+     `flow`, `open-task`, `snooze`) and `get_incomplete_tasks()` (backs `fixup-url`)
    - Avoids Apple Events overhead by evaluating JavaScript in-process
+   - When mocking these commands in tests, mock the OmniJS method the command
+     actually calls — not `get_inbox_tasks()`/`get_flagged_tasks()`
 
 3. **URL Schemes** - Primary method for writing/modifying data
+
    - Via `OSXSystem.open_url()` with `omnifocus:///add?` URLs
    - Used by: `add_task()` and all task modification operations
    - Parameters are URL-encoded and opened via macOS `open` command
@@ -105,6 +112,7 @@ The codebase uses two different approaches to interact with OmniFocus:
 ## Code Conventions
 
 ### Python Style
+
 - Use Python 3.12+ features (modern type syntax: `str | None` instead of `Optional[str]`)
 - Use Pydantic for data validation
 - Use Typer with Annotated syntax for CLI arguments
@@ -114,6 +122,7 @@ The codebase uses two different approaches to interact with OmniFocus:
 - Use descriptive variable names over comments
 
 ### Testing
+
 - Tests are in `tests/unit/` directory
 - Use pytest framework
 - All tests use mocked `OSXSystem` - never interact with real OmniFocus
@@ -122,6 +131,7 @@ The codebase uses two different approaches to interact with OmniFocus:
 - Use fixtures for test setup
 
 ### Type Annotations
+
 - Always use type hints
 - For complex return types, define Pydantic models named `FunctionNameReturn`
 - Example: `get_user_profile() -> UserProfileResponse`
@@ -129,25 +139,39 @@ The codebase uses two different approaches to interact with OmniFocus:
 ## Important Implementation Details
 
 ### Task Number Consistency
+
 The "interesting" command shows inbox and flagged tasks with numbered indices. These numbers must remain stable across multiple operations to avoid user confusion. When implementing multi-task operations:
+
 - Fetch all tasks upfront before any modifications
 - Validate all task numbers before processing
 - Store task references, not just numbers
 
 ### Tag Management Workaround
+
 Direct JavaScript-based tag manipulation is unreliable. Instead:
+
 - Create a new task with the desired tags using URL scheme
 - Complete the original task
 - This ensures all task properties (due date, defer date, project, etc.) are preserved
 
 ### LLM Integration
-The `flow` command uses Simon Willison's `llm` CLI tool to shorten task names:
-- Requires `llm` command installed separately
-- Falls back to original name if LLM fails
-- Uses GPT-4o-mini by default (configurable in `LLMTaskShortener`)
+
+The `flow` command calls the Groq HTTP API directly to shorten task names:
+
+- Requires `GROQ_API_KEY` in the environment, or in `~/gits/igor2/secretBox.json`
+- Falls back to the original name on any failure (missing key, API error, truncated or empty response)
+- Uses `openai/gpt-oss-120b` by default (configurable in `LLMTaskShortener`)
+- GPT-OSS are reasoning models: the hidden reasoning trace shares the `max_tokens`
+  budget with the answer, so the budget is 512 and `reasoning_effort` is `low`.
+  That parameter is gated on the model — Groq rejects it with HTTP 400 on
+  non-reasoning models, so `supports_reasoning_effort` decides whether to send it.
+- Groq decommissions models periodically; a 404 means the default needs updating
+  against https://console.groq.com/docs/deprecations
 
 ### Flow Session Integration
+
 The `flow` command integrates with a separate flow tracking system via `y` CLI:
+
 - Calls `y flow-go <session-name>` to start sessions
 - Requires `y` command in PATH
 - Properly escapes arguments with shell quoting
@@ -155,12 +179,14 @@ The `flow` command integrates with a separate flow tracking system via `y` CLI:
 ## Testing Strategy
 
 All external dependencies are completely isolated:
+
 - `OSXSystem` is mocked in all tests
 - No actual OmniFocus calls during testing
 - No network requests during testing
 - Tests run in parallel for speed
 
 When adding new features:
+
 1. Add tests to `tests/unit/test_omnifocus.py`
 2. Mock all `OSXSystem` methods used
 3. Verify behavior with various inputs
@@ -185,12 +211,13 @@ When adding new features:
 ## External Dependencies
 
 - **OmniFocus**: macOS productivity app (required)
-- **Simon Willison's llm**: Optional, for AI-powered task name shortening
+- **Groq API key**: Optional, for AI-powered task name shortening (`GROQ_API_KEY`)
 - **Flow system (y command)**: Optional, for flow session tracking
 - **UV**: Package manager for running and installing
 
 ## CLI Entry Points
 
 The project defines two CLI entry points in `pyproject.toml`:
+
 - `omnifocus`: Primary command
 - `todo`: Alias for shorter typing
