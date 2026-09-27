@@ -1,0 +1,51 @@
+# no-mistakes gate config. commands, review, protected_paths and no_ci are read only from main.
+
+commands:
+  # uv.lock is gitignored, so this resolves fresh from pyproject.toml every run.
+  prepare: "uv sync"
+  # The whole suite (tests/unit/test_omnifocus.py, ~1.5s). Fully mocked: an autouse fixture patches
+  # omnifocus.system/manager, and requests, subprocess.run and the Groq key lookup are patched per test.
+  # Verified by running it with failing osascript/open/fzf stubs first on PATH: none was invoked.
+  test: "just test"
+  # ruff is pinned in pyproject.toml to the .pre-commit-config.yaml rev, so this matches CI.
+  lint: "uv run ruff check . && uv run ruff format --check ."
+  format: "uv run ruff format ."
+
+# .github/workflows/test.yml runs on PRs to main: uv sync, `uv run ruff check .`,
+# pytest, then publishes results and a badge gist. CI exists, so no_ci stays unset.
+
+ignore_patterns:
+  # Saved AI chat transcripts; historical record, not code or docs to keep current.
+  - "zz-chop-logs/**"
+  - "chop-logs/**"
+  - "cursor-logs/**"
+  - "cursor_logs/**"
+
+protected_paths:
+  # The workflow holds the GIST_TOKEN secret; a CI repair must not edit it unattended.
+  - ".github/**"
+
+review:
+  path_instructions:
+    - path: "omnifocus.py"
+      instructions: |
+        This CLI drives Igor's real OmniFocus database. Everything that touches OmniFocus (osascript
+        JXA/OmniJS, `open omnifocus:///...` URLs) plus the clipboard and the `y` flow CLI goes through
+        the OSXSystem humble object, which OmniFocusManager receives by injection; OmniFocus access
+        added anywhere else escapes the test mocks and would hit the real database in tests.
+        Commands that change tasks keep their safety rails: `complete` and `snooze` take --dry-run,
+        and multi-task `complete` prompts per task unless --no-confirm is passed. Snooze and tag
+        changes work by creating a replacement task via an `omnifocus:///add?` URL and then
+        completing the original, so every task property (due, defer, project, tags, estimate, note)
+        must be carried into the URL or it is silently lost.
+        Task numbers shown by `interesting` must stay stable across a command: fetch and validate
+        every requested number before modifying any task (see `complete`), and store Task objects,
+        not indices. The file is also a uv script: its `# /// script` dependency block must list the
+        same packages as pyproject.toml `dependencies`, so a new import needs adding to both.
+    - path: "tests/**"
+      instructions: |
+        No test may reach real OmniFocus, the network, or the developer's disk secrets. Mock the
+        method a command actually calls: numbered-task commands go through
+        `get_inbox_and_flagged_tasks_omni()`, not `get_inbox_tasks()`/`get_flagged_tasks()`.
+        LLMTaskShortener reads $GROQ_API_KEY and falls back to ~/gits/igor2/secretBox.json, so tests
+        build it with `_get_api_key` patched (the `_shortener()` helper) and patch `requests.post`.
