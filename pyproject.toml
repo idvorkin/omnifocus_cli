@@ -36,6 +36,6 @@ addopts = "-v"
 [dependency-groups]
 dev = [
     "pytest>=7.0.0",
-    "ruff>=0.1.6",
+    "ruff==0.11.11",  # match .pre-commit-config.yaml; newer releases flag 137 existing errors
 ]
 
